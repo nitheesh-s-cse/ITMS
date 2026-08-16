@@ -251,17 +251,20 @@ def camera_loop():
 
         # Support 0 / webcam / local for built-in camera fallback
         if target_raw in ["0", "webcam", "local"]:
-            cam_src = 0
             display_url = "Local Webcam (0)"
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if not cap.isOpened():
+                cap = cv2.VideoCapture(0)
         else:
             if not target_raw.endswith("/video") and not target_raw.endswith(".mjpeg") and not target_raw.startswith("rtsp://"):
                 cam_src = target_raw.rstrip("/") + "/video"
             else:
                 cam_src = target_raw
             display_url = cam_src
+            cap = cv2.VideoCapture(cam_src)
 
-        cap = cv2.VideoCapture(cam_src)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
 
         if not cap.isOpened():
             state["camera_connected"] = False
