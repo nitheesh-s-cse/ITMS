@@ -420,14 +420,27 @@ function saveCamSettings() {
 
 // ---------- Reports ----------
 function generateReport() {
-  toast("Report Generated");
   const body = document.getElementById("reportsBody");
-  const type = document.getElementById("repType").value;
+  const typeSelect = document.getElementById("repType");
+  const type = typeSelect ? typeSelect.value : "Daily_Summary";
+  const filename = `${type.replace(/\s/g, "_")}_${Date.now()}.pdf`;
+  const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const sizeStr = `${(Math.random() * 2 + 0.5).toFixed(1)} MB`;
+
   const row = document.createElement("tr");
-  row.innerHTML = `<td>${type.replace(/\s/g, "_")}_${Date.now()}.pdf</td><td>${new Date().toLocaleDateString()}</td><td>${(Math.random()*2+0.5).toFixed(1)} MB</td><td><i data-lucide="download"></i></td>`;
+  row.style.cursor = "pointer";
+  row.onclick = () => downloadReport(filename);
+  row.innerHTML = `
+    <td><span style="color:var(--cyan);text-decoration:underline;">${filename}</span></td>
+    <td class="mono">${dateStr}</td>
+    <td class="mono">${sizeStr}</td>
+    <td><button class="btn" style="padding:4px 8px;" onclick="event.stopPropagation(); downloadReport('${filename}');"><i data-lucide="download"></i> Download</button></td>
+  `;
   body.prepend(row);
   lucide.createIcons();
+  downloadReport(filename);
 }
+
 
 // ---------- Maintenance modal (simplified inline) ----------
 function openMaintModal() {
