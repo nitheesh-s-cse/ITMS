@@ -180,24 +180,49 @@ function toast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ---------- Alert sound (unlocked on first click, per browser autoplay rules) ----------
+// ---------- Alert sound (unlocked on first user interaction per browser rules) ----------
 let audioCtx = null;
-document.addEventListener("click", () => {
+function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}, { once: true });
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+document.addEventListener("click", initAudio);
+document.addEventListener("keydown", initAudio);
 
 function playBeep() {
-  if (!document.getElementById("toggleSound")?.checked) return;
+  const toggle = document.getElementById("toggleSound");
+  if (toggle && !toggle.checked) return;
+  initAudio();
   if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.frequency.value = 880;
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.18);
+
+  const now = audioCtx.currentTime;
+  
+  // Urgent 2-tone emergency siren chime
+  const osc1 = audioCtx.createOscillator();
+  const gain1 = audioCtx.createGain();
+  osc1.type = "sawtooth";
+  osc1.frequency.setValueAtTime(880, now);
+  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+  gain1.gain.setValueAtTime(0.25, now);
+  gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+  osc1.connect(gain1);
+  gain1.connect(audioCtx.destination);
+  osc1.start(now);
+  osc1.stop(now + 0.18);
+
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = "sawtooth";
+  osc2.frequency.setValueAtTime(1200, now + 0.20);
+  osc2.frequency.exponentialRampToValueAtTime(880, now + 0.35);
+  gain2.gain.setValueAtTime(0.25, now + 0.20);
+  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.38);
+  osc2.connect(gain2);
+  gain2.connect(audioCtx.destination);
+  osc2.start(now + 0.20);
+  osc2.stop(now + 0.38);
 }
+
 
 // ---------- Socket.IO ----------
 let socket;
