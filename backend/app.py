@@ -274,6 +274,21 @@ def set_threshold():
     return jsonify({"ok": True, "threshold": state["confidence_threshold"]})
 
 
+@app.route("/api/settings/camera", methods=["POST"])
+def set_camera():
+    global IP_CAM_URL
+    data = request.get_json(force=True)
+    url = data.get("url", "").strip()
+    if url:
+        if not url.endswith("/video"):
+            url = url.rstrip("/") + "/video"
+        IP_CAM_URL = url
+        print(f"[CAM] Dynamic update: IP Camera URL set to {IP_CAM_URL}")
+        return jsonify({"ok": True, "url": IP_CAM_URL})
+    return jsonify({"ok": False, "error": "Invalid URL"}), 400
+
+
+
 @app.route("/api/alerts", methods=["GET"])
 def get_alerts():
     if mongo_db is not None:

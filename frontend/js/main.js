@@ -372,8 +372,35 @@ sensSlider?.addEventListener("input", () => {
 });
 
 // ---------- Settings: camera config ----------
-function testConnection() { toast("Connection test successful"); }
-function saveCamSettings() { toast("Settings Saved"); }
+function testConnection() {
+  const input = document.getElementById("camIpInput");
+  const val = input ? input.value.trim() : "";
+  if (!val) { toast("Please enter a camera URL"); return; }
+  toast("Testing camera connection...");
+  saveCamSettings();
+}
+
+function saveCamSettings() {
+  const input = document.getElementById("camIpInput");
+  const val = input ? input.value.trim() : "";
+  if (!val) return;
+  fetch(`${BACKEND_URL}/api/settings/camera`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: val }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.ok) {
+      toast(`Camera URL updated: ${data.url}`);
+      reconnectCamera();
+    } else {
+      toast("Failed to update camera URL");
+    }
+  })
+  .catch(() => toast("Error connecting to backend"));
+}
+
 
 // ---------- Reports ----------
 function generateReport() {
