@@ -85,7 +85,15 @@ cv2.putText(dummy_img, "RAILGUARD CAM STREAM INITIALIZING...", (90, 240),
             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (6, 182, 212), 2)
 _, dummy_buf = cv2.imencode(".jpg", dummy_img)
 
+initial_ip_cam = os.getenv("IP_CAM_URL", "http://10.200.57.8:8080/video")
+if not initial_ip_cam or "<your-phone-ip>" in initial_ip_cam or "YOUR-PHONE-IP" in initial_ip_cam:
+    initial_ip_cam = "http://10.200.57.8:8080/video"
+if not initial_ip_cam.endswith("/video"):
+    initial_ip_cam = initial_ip_cam.rstrip("/") + "/video"
+
 state = {
+    "ip_cam_url": initial_ip_cam,
+    "reconnect_requested": False,
     "confidence_threshold": CONFIDENCE_THRESHOLD_DEFAULT,
     "camera_connected": False,
     "last_cooldown": {},        # {class_name: last_alert_timestamp}
@@ -98,6 +106,7 @@ state = {
     },
 }
 state_lock = threading.Lock()
+
 
 
 
@@ -200,27 +209,34 @@ def process_frame(frame, run_detection=True):
 def camera_loop():
     """Background thread: pulls frames from the phone's IP-webcam feed with zero buffer latency."""
     while True:
-        cap = cv2.VideoCapture(IP_CAM_URL)
+        current_url = state["ip_cam_url"]
+        state["reconnect_requested"] = False
+
+        cap = cv2.VideoCapture(current_url)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # flush buffer for zero lag
 
         if not cap.isOpened():
             state["camera_connected"] = False
-            socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
-            print(f"[CAM] Could not open {IP_CAM_URL}, retrying in 5s...")
-            time.sleep(5)
+            socketio.emit("camera_status", {"connected": False, "url": current_url})
+            print(f"[CAM] Could not open {current_url}, retrying in 3s...")
+            time.sleep(3)
             continue
 
         state["camera_connected"] = True
-        socketio.emit("camera_status", {"connected": True, "url": IP_CAM_URL})
-        print(f"[CAM] Connected to {IP_CAM_URL}")
+        socketio.emit("camera_status", {"connected": True, "url": current_url})
+        print(f"[CAM] Connected to {current_url}")
 
         frame_count = 0
         while True:
+            if state["reconnect_requested"]:
+                print("[CAM] Reconnect requested via API, switching stream...")
+                break
+
             ok, frame = cap.read()
             if not ok:
                 print("[CAM] Lost connection, reconnecting...")
                 state["camera_connected"] = False
-                socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
+                socketio.emit("camera_status", {"connected": False, "url": current_url})
                 break
 
             frame_count += 1
@@ -276,17 +292,42 @@ def set_threshold():
 
 @app.route("/api/settings/camera", methods=["POST"])
 def set_camera():
-    global IP_CAM_URL
     data = request.get_json(force=True)
     url = data.get("url", "").strip()
     if url:
         if not url.endswith("/video"):
             url = url.rstrip("/") + "/video"
-        IP_CAM_URL = url
-        print(f"[CAM] Dynamic update: IP Camera URL set to {IP_CAM_URL}")
-        return jsonify({"ok": True, "url": IP_CAM_URL})
+        state["ip_cam_url"] = url
+        state["reconnect_requested"] = True
+        print(f"[CAM] Dynamic update: IP Camera URL set to {state['ip_cam_url']}")
+        return jsonify({"ok": True, "url": state["ip_cam_url"]})
     return jsonify({"ok": False, "error": "Invalid URL"}), 400
 
+
+@app.route("/api/settings/camera/test", methods=["POST"])
+def test_camera():
+    data = request.get_json(force=True)
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"ok": False, "error": "Camera URL cannot be empty"}), 400
+    if not url.endswith("/video"):
+        url = url.rstrip("/") + "/video"
+
+    try:
+        test_cap = cv2.VideoCapture(url)
+        if not test_cap.isOpened():
+            test_cap.release()
+            return jsonify({"ok": False, "error": "Could not open stream at URL"}), 400
+
+        ok, frame = test_cap.read()
+        test_cap.release()
+
+        if ok and frame is not None and frame.size > 0:
+            return jsonify({"ok": True, "message": "Frame acquired successfully"})
+        else:
+            return jsonify({"ok": False, "error": "Stream opened but failed to read frame"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/alerts", methods=["GET"])
@@ -312,9 +353,11 @@ def get_alerts():
 def get_status():
     return jsonify({
         "camera_connected": state["camera_connected"],
+        "ip_cam_url": state["ip_cam_url"],
         "confidence_threshold": state["confidence_threshold"],
         "stats": state["stats"],
     })
+
 
 
 if __name__ == "__main__":

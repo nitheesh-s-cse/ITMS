@@ -376,14 +376,29 @@ function testConnection() {
   const input = document.getElementById("camIpInput");
   const val = input ? input.value.trim() : "";
   if (!val) { toast("Please enter a camera URL"); return; }
-  toast("Testing camera connection...");
-  saveCamSettings();
+  toast("Testing camera stream connection...");
+  
+  fetch(`${BACKEND_URL}/api/settings/camera/test`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: val }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.ok) {
+      toast("Camera test successful! Frame acquired ✅");
+    } else {
+      toast(`Camera test failed: ${data.error || "Could not reach camera"}`);
+    }
+  })
+  .catch(() => toast("Error connecting to backend server"));
 }
 
 function saveCamSettings() {
   const input = document.getElementById("camIpInput");
   const val = input ? input.value.trim() : "";
-  if (!val) return;
+  if (!val) { toast("Please enter a camera URL"); return; }
+  
   fetch(`${BACKEND_URL}/api/settings/camera`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -392,14 +407,29 @@ function saveCamSettings() {
   .then(res => res.json())
   .then(data => {
     if (data.ok) {
-      toast(`Camera URL updated: ${data.url}`);
-      reconnectCamera();
+      toast(`Camera URL saved & updated: ${data.url}`);
+      setFeedSources(true);
     } else {
-      toast("Failed to update camera URL");
+      toast(`Failed to save camera URL: ${data.error || "Invalid response"}`);
     }
   })
-  .catch(() => toast("Error connecting to backend"));
+  .catch(() => toast("Error connecting to backend server"));
 }
+
+function loadCurrentCameraUrl() {
+  fetch(`${BACKEND_URL}/api/status`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.ip_cam_url) {
+        const input = document.getElementById("camIpInput");
+        if (input) input.value = data.ip_cam_url;
+      }
+    })
+    .catch(() => {});
+}
+// Pre-fill camera input with current backend camera URL on page load
+loadCurrentCameraUrl();
+
 
 
 // ---------- Reports ----------
