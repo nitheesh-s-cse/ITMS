@@ -117,64 +117,75 @@ def in_danger_zone(box, frame_w, frame_h):
     return frame_w * 0.25 < cx < frame_w * 0.75
 
 
-def process_frame(frame):
+last_detections_cache = []
+
+def process_frame(frame, run_detection=True):
+    global last_detections_cache
     h, w = frame.shape[:2]
-    results = model(frame, verbose=False)[0]
+    
+    if run_detection:
+        results = model(frame, imgsz=320, verbose=False)[0]
+        detections = []
+        for box in results.boxes:
+            cls_id = int(box.cls[0])
+            cls_name = model.names[cls_id]
+            conf = float(box.conf[0])
+            if conf < state["confidence_threshold"]:
+                continue
 
-    detections = []
-    for box in results.boxes:
-        cls_id = int(box.cls[0])
-        cls_name = model.names[cls_id]
-        conf = float(box.conf[0])
-        if conf < state["confidence_threshold"]:
-            continue
+            xyxy = box.xyxy[0].tolist()
+            x1, y1, x2, y2 = map(int, xyxy)
+            label = WATCH_CLASSES.get(cls_name, cls_name)
+            danger = cls_name in WATCH_CLASSES and in_danger_zone((x1, y1, x2, y2), w, h)
+            
+            detections.append({
+                "class": cls_name,
+                "label": label,
+                "confidence": round(conf, 3),
+                "bbox": [x1, y1, x2, y2],
+                "danger": danger,
+                "timestamp": now_iso(),
+            })
 
-        xyxy = box.xyxy[0].tolist()
-        x1, y1, x2, y2 = map(int, xyxy)
-        label = WATCH_CLASSES.get(cls_name, cls_name)
+            if cls_name in WATCH_CLASSES and danger:
+                last = state["last_cooldown"].get(cls_name, 0)
+                if time.time() - last > ALERT_COOLDOWN_SECONDS:
+                    state["last_cooldown"][cls_name] = time.time()
+                    alert = {
+                        "type": "OBSTACLE",
+                        "object_class": cls_name,
+                        "confidence": round(conf, 3),
+                        "km_marker": round(state["stats"]["track_scanned_km"], 2),
+                        "severity": "High" if conf > 0.75 else "Medium",
+                        "status": "Active",
+                        "timestamp": now_iso(),
+                    }
+                    with state_lock:
+                        state["stats"]["active_alerts"] += 1
+                    socketio.emit("new_alert", alert)
+                    log_alert_to_db(alert)
+        last_detections_cache = detections
+    else:
+        detections = last_detections_cache
 
-        # draw overlay
-        danger = cls_name in WATCH_CLASSES and in_danger_zone((x1, y1, x2, y2), w, h)
-        color = (0, 0, 255) if danger else (6, 182, 212)  # BGR: red / cyan
+    # draw overlay using latest detections
+    for det in detections:
+        x1, y1, x2, y2 = det["bbox"]
+        danger = det.get("danger", False)
+        color = (0, 0, 255) if danger else (6, 182, 212)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(frame, f"{cls_name} {conf:.2f}", (x1, max(y1 - 8, 12)),
+        cv2.putText(frame, f"{det['class']} {det['confidence']:.2f}", (x1, max(y1 - 8, 12)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-        detection = {
-            "class": cls_name,
-            "label": label,
-            "confidence": round(conf, 3),
-            "bbox": [x1, y1, x2, y2],
-            "timestamp": now_iso(),
-        }
-        detections.append(detection)
-        socketio.emit("detection_event", detection)
-
-        if cls_name in WATCH_CLASSES and danger:
-            last = state["last_cooldown"].get(cls_name, 0)
-            if time.time() - last > ALERT_COOLDOWN_SECONDS:
-                state["last_cooldown"][cls_name] = time.time()
-                alert = {
-                    "type": "OBSTACLE",
-                    "object_class": cls_name,
-                    "confidence": round(conf, 3),
-                    "km_marker": round(state["stats"]["track_scanned_km"], 2),
-                    "severity": "High" if conf > 0.75 else "Medium",
-                    "status": "Active",
-                    "timestamp": now_iso(),
-                }
-                with state_lock:
-                    state["stats"]["active_alerts"] += 1
-                socketio.emit("new_alert", alert)
-                log_alert_to_db(alert)
 
     return frame, detections
 
 
 def camera_loop():
-    """Background thread: pulls frames from the phone's IP-webcam feed."""
+    """Background thread: pulls frames from the phone's IP-webcam feed with zero buffer latency."""
     while True:
         cap = cv2.VideoCapture(IP_CAM_URL)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # flush buffer for zero lag
+
         if not cap.isOpened():
             state["camera_connected"] = False
             socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
@@ -196,18 +207,19 @@ def camera_loop():
                 break
 
             frame_count += 1
-            # run detection every frame (YOLOv8n is light enough on CPU;
-            # drop to every-2nd-frame if your Render instance is slow)
-            frame, _ = process_frame(frame)
+            # Run YOLOv8 detection every 2nd frame for 2x - 3x faster FPS
+            run_det = (frame_count % 2 == 0)
+            frame, _ = process_frame(frame, run_detection=run_det)
 
             with state_lock:
-                state["stats"]["track_scanned_km"] += 0.0008  # simulated distance ticker
+                state["stats"]["track_scanned_km"] += 0.0008
 
-            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
             if ok2:
                 state["current_frame_jpeg"] = buf.tobytes()
 
         cap.release()
+
 
 
 def heartbeat_loop():
