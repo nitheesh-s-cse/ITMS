@@ -1,10 +1,19 @@
 // ============================================================
 // RAILGUARD ITMS — Config
 // ============================================================
-// ⬇️ Point this at your deployed Render backend URL
-const BACKEND_URL = window.RAILGUARD_BACKEND_URL || "http://localhost:5000";
+const getBackendUrl = () => {
+  const saved = localStorage.getItem("railguard_backend_url");
+  if (saved) return saved;
+  if (window.RAILGUARD_BACKEND_URL) return window.RAILGUARD_BACKEND_URL;
+  if (window.location.protocol === "https:") {
+    return "https://railguard-backend.onrender.com";
+  }
+  return "http://localhost:5000";
+};
+let BACKEND_URL = getBackendUrl();
 
 lucide.createIcons();
+
 
 // ============================================================
 // Boot sequence — signature intro animation
@@ -524,6 +533,25 @@ function saveCamSettings() {
       reconnectCamera();
     });
 }
+
+function saveBackendUrlSettings() {
+  const input = document.getElementById("backendUrlInput");
+  const val = input ? input.value.trim() : "";
+  if (!val) {
+    toast("Please enter a valid Backend URL");
+    return;
+  }
+  localStorage.setItem("railguard_backend_url", val);
+  BACKEND_URL = val;
+  toast("Backend URL saved! Reloading...");
+  setTimeout(() => window.location.reload(), 800);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const bInput = document.getElementById("backendUrlInput");
+  if (bInput) bInput.value = BACKEND_URL;
+});
+
 
 
 // ---------- Reports ----------

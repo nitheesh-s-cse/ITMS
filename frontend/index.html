@@ -488,9 +488,16 @@
             <input type="text" id="camIpInput" placeholder="http://192.168.1.5:8080/video" style="width:100%; margin-top:8px;">
             <div class="control-bar">
               <button class="btn" onclick="testConnection()">Test Connection</button>
-              <button class="btn primary" onclick="saveCamSettings()">Save</button>
+              <button class="btn primary" onclick="saveCamSettings()">Save Camera IP</button>
+            </div>
+            <div class="card-title mt" style="margin-top:16px;">Backend Service Endpoint</div>
+            <div class="subtle">Set local/cloud server endpoint:</div>
+            <input type="text" id="backendUrlInput" placeholder="http://localhost:5000" style="width:100%; margin-top:6px;">
+            <div class="control-bar mt">
+              <button class="btn primary" onclick="saveBackendUrlSettings()">Save Backend URL</button>
             </div>
           </div>
+
           <div class="card">
             <div class="card-title">Alert Preferences</div>
             <div class="flex-between mt"><span class="subtle">Sound Alerts</span><label class="toggle"><input type="checkbox" id="toggleSound" checked><span class="track"><span class="thumb"></span></span></label></div>
