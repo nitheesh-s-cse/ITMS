@@ -308,8 +308,9 @@ function setConnStatus(ok) {
 try { connectSocket(); } catch (e) { console.warn("Socket connection failed:", e); }
 
 // ---------- Feed images ----------
-function setFeedSources() {
-  const url = `${BACKEND_URL}/video_feed`;
+function setFeedSources(cacheBust = false) {
+  const ts = cacheBust ? `?t=${Date.now()}` : "";
+  const url = `${BACKEND_URL}/video_feed${ts}`;
   ["dashFeedImg", "liveFeedImg", "thermalFeedImg"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.src = url;
@@ -327,9 +328,10 @@ function toggleRecording() {
   toast(recording ? "Recording started" : "Recording stopped");
 }
 function reconnectCamera() {
-  toast("Reconnecting camera…");
-  setFeedSources();
+  toast("Reconnecting live camera feed...");
+  setFeedSources(true);
 }
+
 function toggleFullscreen() {
   const el = document.getElementById("liveFeedImg");
   if (el.requestFullscreen) el.requestFullscreen();

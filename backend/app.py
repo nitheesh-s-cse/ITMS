@@ -78,11 +78,17 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 model = YOLO("yolov8n.pt")  # small + fast, CPU-friendly
 
+# Initial placeholder JPEG frame (so /video_feed never hangs on connect)
+dummy_img = np.zeros((480, 640, 3), dtype=np.uint8)
+cv2.putText(dummy_img, "RAILGUARD CAM STREAM INITIALIZING...", (90, 240),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (6, 182, 212), 2)
+_, dummy_buf = cv2.imencode(".jpg", dummy_img)
+
 state = {
     "confidence_threshold": CONFIDENCE_THRESHOLD_DEFAULT,
     "camera_connected": False,
     "last_cooldown": {},        # {class_name: last_alert_timestamp}
-    "current_frame_jpeg": None,
+    "current_frame_jpeg": dummy_buf.tobytes(),
     "stats": {
         "track_scanned_km": 0.0,
         "active_alerts": 0,
@@ -91,6 +97,7 @@ state = {
     },
 }
 state_lock = threading.Lock()
+
 
 
 def now_iso():
