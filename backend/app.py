@@ -197,24 +197,50 @@ def process_frame(frame, run_detection=True):
 
 
 
-def make_status_frame(msg1, msg2=""):
+sim_frame_index = 0
+
+def make_status_frame(msg1="SIMULATED INSPECTION FEED", msg2="Waiting for camera stream..."):
+    global sim_frame_index
+    sim_frame_index += 1
+
     img = np.zeros((480, 640, 3), dtype=np.uint8)
-    img[:, :] = (20, 15, 10)
-    cv2.rectangle(img, (20, 20), (620, 460), (6, 182, 212), 2)
-    cv2.putText(img, "RAILGUARD ITMS — CAMERA FEED", (140, 160),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (226, 232, 240), 2)
-    cv2.putText(img, msg1, (80, 230),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 165, 255), 2)
-    if msg2:
-        cv2.putText(img, msg2[:50], (80, 270),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (148, 163, 184), 1)
+    img[:, :] = (15, 23, 42)  # Deep industrial slate background
+
+    # Horizon line
+    cv2.line(img, (0, 240), (640, 240), (30, 41, 59), 1)
+
+    # Perspective railway tracks
+    cv2.line(img, (260, 240), (50, 480), (148, 163, 184), 3)  # Left rail
+    cv2.line(img, (380, 240), (590, 480), (148, 163, 184), 3)  # Right rail
+
+    # Animated sleepers moving downward
+    offset = (sim_frame_index * 14) % 36
+    for y in range(245 + offset, 480, 36):
+        scale = (y - 240) / 240.0
+        x_left = int(260 - scale * 210)
+        x_right = int(380 + scale * 210)
+        cv2.line(img, (max(0, x_left), y), (min(640, x_right), y), (51, 65, 85), max(1, int(scale * 3)))
+
+    # Top HUD Status Bar
+    cv2.rectangle(img, (0, 0), (640, 42), (10, 14, 23), -1)
+    cv2.putText(img, "RAILGUARD ITMS — AUTOMATED TRACK MONITORING", (16, 26),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.52, (34, 211, 238), 2)
     t_str = datetime.now().strftime("%H:%M:%S")
-    cv2.putText(img, f"STATUS: RECONNECTING ({t_str})", (180, 330),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (34, 211, 238), 2)
-    cv2.putText(img, "Hint: Open 'IP Webcam' app on phone & click 'Start server'", (60, 380),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (100, 116, 139), 1)
-    ok, buf = cv2.imencode(".jpg", img)
+    cv2.putText(img, f"LIVE 🔴 {t_str}", (520, 26),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (239, 68, 68), 2)
+
+    # Center Status Card
+    cv2.rectangle(img, (120, 160), (520, 235), (15, 23, 42), -1)
+    cv2.rectangle(img, (120, 160), (520, 235), (6, 182, 212), 1)
+    cv2.putText(img, msg1, (140, 192),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (226, 232, 240), 2)
+    if msg2:
+        cv2.putText(img, msg2[:52], (140, 218),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, (148, 163, 184), 1)
+
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 60])
     return buf.tobytes() if ok else None
+
 
 
 def camera_loop():
