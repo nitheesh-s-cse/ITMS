@@ -6,11 +6,12 @@ const getBackendUrl = () => {
   if (saved) return saved;
   if (window.RAILGUARD_BACKEND_URL) return window.RAILGUARD_BACKEND_URL;
   if (window.location.protocol === "https:") {
-    return "https://railguard-backend.onrender.com";
+    return "https://railguard-backend-n12a.onrender.com";
   }
   return "http://localhost:5000";
 };
 let BACKEND_URL = getBackendUrl();
+
 
 lucide.createIcons();
 
