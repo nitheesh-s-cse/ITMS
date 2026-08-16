@@ -168,8 +168,10 @@
               <button class="btn" onclick="snapshotFeed()">📸 Snapshot</button>
               <button class="btn" id="recBtn" onclick="toggleRecording()">⏺ Start Recording</button>
               <button class="btn" onclick="reconnectCamera()">🔄 Reconnect Camera</button>
+              <button class="btn" onclick="playBeep(); toast('Disaster Siren Triggered 🚨');">📢 Test Siren Horn</button>
               <button class="btn" onclick="toggleFullscreen()">🔍 Fullscreen</button>
             </div>
+
             <div class="conn-status" id="connStatus">Connecting to mobile camera…</div>
           </div>
 
@@ -284,10 +286,8 @@
 
         <div class="card">
           <div class="card-title">Detection Log</div>
-          <div class="table-wrap">
-            <table><thead><tr><th>Timestamp</th><th>Class</th><th>Confidence</th><th>BBox</th><th>Snapshot</th></tr></thead>
-            <tbody id="detectionLogBody"><tr><td colspan="5" class="subtle">No detections logged yet.</td></tr></tbody></table>
-          </div>
+          <table><thead><tr><th>Timestamp</th><th>Class</th><th>Confidence</th><th>BBox</th><th>Snapshot</th></tr></thead>
+          <tbody id="detectionLogBody"><tr><td colspan="5" class="subtle">No detections logged yet.</td></tr></tbody></table>
         </div>
       </section>
 
@@ -301,15 +301,12 @@
               <div class="tab" data-filter="resolved">Resolved</div>
             </div>
             <div class="card">
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>ID</th><th>Time</th><th>Type</th><th>Object</th><th>Conf</th><th>KM</th><th>Severity</th><th>Status</th><th>Action</th></tr></thead>
-                  <tbody id="alertsTableBody"><tr><td colspan="9" class="subtle" style="text-align:center; padding:30px;">No alerts recorded yet — track is clear.</td></tr></tbody>
-                </table>
-              </div>
+              <table>
+                <thead><tr><th>ID</th><th>Time</th><th>Type</th><th>Object</th><th>Conf</th><th>KM</th><th>Severity</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="alertsTableBody"><tr><td colspan="9" class="subtle" style="text-align:center; padding:30px;">No alerts recorded yet — track is clear.</td></tr></tbody>
+              </table>
             </div>
           </div>
-
           <div>
             <div class="card mb">
               <div class="card-title">Alert Statistics</div>
@@ -386,12 +383,10 @@
         </div>
         <div class="card">
           <div class="card-title">Maintenance History</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Component</th><th>Action</th><th>Technician</th><th>Status</th></tr></thead>
-              <tbody id="maintHistoryBody"></tbody>
-            </table>
-          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Component</th><th>Action</th><th>Technician</th><th>Status</th></tr></thead>
+            <tbody id="maintHistoryBody"></tbody>
+          </table>
         </div>
       </section>
 
@@ -407,12 +402,10 @@
         </div>
         <div class="card">
           <div class="card-title">Recent Reports</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Filename</th><th>Date</th><th>Size</th><th></th></tr></thead>
-              <tbody id="reportsBody"></tbody>
-            </table>
-          </div>
+          <table>
+            <thead><tr><th>Filename</th><th>Date</th><th>Size</th><th></th></tr></thead>
+            <tbody id="reportsBody"></tbody>
+          </table>
         </div>
       </section>
 
@@ -436,20 +429,17 @@
         </div>
         <div class="card mb">
           <div class="card-title">Competitive Matrix</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Feature</th><th>Existing Systems</th><th>RailGuard ITMS</th></tr></thead>
-              <tbody>
-                <tr><td>Monitoring</td><td>Periodic</td><td>Continuous</td></tr>
-                <tr><td>Real-time Alerts</td><td>Limited</td><td>Yes</td></tr>
-                <tr><td>Curve / Fog Handling</td><td>Limited</td><td>IMU/GPS Assisted</td></tr>
-                <tr><td>Response Time</td><td>Delayed</td><td>Near Real-Time</td></tr>
-                <tr><td>Surface Defect Detection</td><td>Manual</td><td>Laser-assisted confirmation</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <table>
+            <thead><tr><th>Feature</th><th>Existing Systems</th><th>RailGuard ITMS</th></tr></thead>
+            <tbody>
+              <tr><td>Monitoring</td><td>Periodic</td><td>Continuous</td></tr>
+              <tr><td>Real-time Alerts</td><td>Limited</td><td>Yes</td></tr>
+              <tr><td>Curve / Fog Handling</td><td>Limited</td><td>IMU/GPS Assisted</td></tr>
+              <tr><td>Response Time</td><td>Delayed</td><td>Near Real-Time</td></tr>
+              <tr><td>Surface Defect Detection</td><td>Manual</td><td>Laser-assisted confirmation</td></tr>
+            </tbody>
+          </table>
         </div>
-
         <div class="grid grid-2">
           <div class="card"><div class="card-title">Social Impact</div><div class="subtle">Early detection prevents derailments; safer conditions for maintenance crews; improved public trust.</div></div>
           <div class="card"><div class="card-title">Economic Impact</div><div class="subtle">Addresses disruptions currently estimated at ₹1,000–5,000 crore in annual losses.</div></div>
@@ -485,19 +475,12 @@
         <div class="grid grid-2 mb">
           <div class="card">
             <div class="card-title">Camera Configuration</div>
-            <input type="text" id="camIpInput" placeholder="http://192.168.1.5:8080/video" style="width:100%; margin-top:8px;">
+            <input type="text" id="camIpInput" value="http://10.200.57.8:8080/video" placeholder="http://10.200.57.8:8080/video" style="width:100%; margin-top:8px;">
             <div class="control-bar">
               <button class="btn" onclick="testConnection()">Test Connection</button>
-              <button class="btn primary" onclick="saveCamSettings()">Save Camera IP</button>
-            </div>
-            <div class="card-title mt" style="margin-top:16px;">Backend Service Endpoint</div>
-            <div class="subtle">Set local/cloud server endpoint:</div>
-            <input type="text" id="backendUrlInput" placeholder="http://localhost:5000" style="width:100%; margin-top:6px;">
-            <div class="control-bar mt">
-              <button class="btn primary" onclick="saveBackendUrlSettings()">Save Backend URL</button>
+              <button class="btn primary" onclick="saveCamSettings()">Save</button>
             </div>
           </div>
-
           <div class="card">
             <div class="card-title">Alert Preferences</div>
             <div class="flex-between mt"><span class="subtle">Sound Alerts</span><label class="toggle"><input type="checkbox" id="toggleSound" checked><span class="track"><span class="thumb"></span></span></label></div>
@@ -508,11 +491,12 @@
         <div class="grid grid-2 mb">
           <div class="card">
             <div class="card-title">Detection Sensitivity</div>
-            <div class="subtle mt">Confidence threshold</div>
-            <input type="range" min="10" max="90" value="50">
-            <div class="subtle mt">Cooldown period (sec)</div>
-            <input type="range" min="1" max="15" value="5">
+            <div class="subtle mt">Confidence threshold (<span id="sensValue" class="mono" style="color:var(--cyan);">0.50</span>)</div>
+            <input type="range" id="sensSlider" min="10" max="90" value="50">
+            <div class="subtle mt">Cooldown period: <span id="cooldownValue" class="mono" style="color:var(--cyan);">5s</span></div>
+            <input type="range" id="cooldownSlider" min="1" max="15" value="5">
           </div>
+
           <div class="card">
             <div class="card-title">Display Preferences</div>
             <div class="flex-between mt"><span class="subtle">Theme</span><select><option>Dark</option><option>Darker</option></select></div>

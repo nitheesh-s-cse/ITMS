@@ -108,15 +108,20 @@ def now_iso():
 def log_alert_to_db(alert):
     if mongo_db is not None:
         try:
-            mongo_db.alerts.insert_one(dict(alert))
+            doc = dict(alert)
+            doc.pop("_id", None)
+            mongo_db.alerts.insert_one(doc)
         except Exception as e:
             print(f"[WARN] MongoDB insert failed: {e}")
 
     if supabase is not None:
         try:
-            supabase.table("alerts").insert(alert).execute()
+            doc = dict(alert)
+            doc.pop("_id", None)
+            supabase.table("alerts").insert(doc).execute()
         except Exception as e:
             print(f"[WARN] Supabase insert failed: {e}")
+
 
 
 def in_danger_zone(box, frame_w, frame_h):
@@ -197,120 +202,51 @@ def process_frame(frame, run_detection=True):
 
 
 
-sim_frame_index = 0
-
-def make_status_frame(msg1="SIMULATED INSPECTION FEED", msg2="Waiting for camera stream..."):
-    global sim_frame_index
-    sim_frame_index += 1
-
-    img = np.zeros((480, 640, 3), dtype=np.uint8)
-    img[:, :] = (15, 23, 42)  # Deep industrial slate background
-
-    # Horizon line
-    cv2.line(img, (0, 240), (640, 240), (30, 41, 59), 1)
-
-    # Perspective railway tracks
-    cv2.line(img, (260, 240), (50, 480), (148, 163, 184), 3)  # Left rail
-    cv2.line(img, (380, 240), (590, 480), (148, 163, 184), 3)  # Right rail
-
-    # Animated sleepers moving downward
-    offset = (sim_frame_index * 14) % 36
-    for y in range(245 + offset, 480, 36):
-        scale = (y - 240) / 240.0
-        x_left = int(260 - scale * 210)
-        x_right = int(380 + scale * 210)
-        cv2.line(img, (max(0, x_left), y), (min(640, x_right), y), (51, 65, 85), max(1, int(scale * 3)))
-
-    # Top HUD Status Bar
-    cv2.rectangle(img, (0, 0), (640, 42), (10, 14, 23), -1)
-    cv2.putText(img, "RAILGUARD ITMS — AUTOMATED TRACK MONITORING", (16, 26),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.52, (34, 211, 238), 2)
-    t_str = datetime.now().strftime("%H:%M:%S")
-    cv2.putText(img, f"LIVE 🔴 {t_str}", (520, 26),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (239, 68, 68), 2)
-
-    # Center Status Card
-    cv2.rectangle(img, (120, 160), (520, 235), (15, 23, 42), -1)
-    cv2.rectangle(img, (120, 160), (520, 235), (6, 182, 212), 1)
-    cv2.putText(img, msg1, (140, 192),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (226, 232, 240), 2)
-    if msg2:
-        cv2.putText(img, msg2[:52], (140, 218),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, (148, 163, 184), 1)
-
-    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 60])
-    return buf.tobytes() if ok else None
-
-
-
 def camera_loop():
-    """Background thread: connects directly to phone IP webcam feed with zero latency."""
-    global IP_CAM_URL
+    """Background thread: pulls frames from the phone's IP-webcam feed with zero buffer latency."""
     while True:
-        target = IP_CAM_URL.strip()
-        print(f"[CAM] Connecting to camera: {target}...")
-
-        if target in ["0", "webcam", "local"]:
-            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-            if not cap.isOpened():
-                cap = cv2.VideoCapture(0)
-        else:
-            cap = cv2.VideoCapture(target)
-
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap = cv2.VideoCapture(IP_CAM_URL)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # flush buffer for zero lag
 
         if not cap.isOpened():
             state["camera_connected"] = False
-            socketio.emit("camera_status", {"connected": False, "url": target})
-            print(f"[CAM] Could not open {target}, retrying in 2s...")
-            time.sleep(2)
+            socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
+            print(f"[CAM] Could not open {IP_CAM_URL}, retrying in 5s...")
+            time.sleep(5)
             continue
 
         state["camera_connected"] = True
-        socketio.emit("camera_status", {"connected": True, "url": target})
-        print(f"[CAM] SUCCESS! Stream active: {target}")
+        socketio.emit("camera_status", {"connected": True, "url": IP_CAM_URL})
+        print(f"[CAM] Connected to {IP_CAM_URL}")
 
-        current_active = target
+        current_active_url = IP_CAM_URL
         frame_count = 0
-        consecutive_fails = 0
-
         while True:
-            if current_active != IP_CAM_URL:
-                print(f"[CAM] Camera URL changed to {IP_CAM_URL}, reconnecting...")
+            if current_active_url != IP_CAM_URL:
+                print(f"[CAM] Switching camera stream to {IP_CAM_URL}...")
                 break
 
             ok, frame = cap.read()
 
-            if not ok or frame is None or frame.size == 0:
-                consecutive_fails += 1
-                if consecutive_fails > 10:
-                    print("[CAM] Lost stream connection, retrying...")
-                    state["camera_connected"] = False
-                    socketio.emit("camera_status", {"connected": False, "url": target})
-                    break
-                time.sleep(0.03)
-                continue
+            if not ok:
+                print("[CAM] Lost connection, reconnecting...")
+                state["camera_connected"] = False
+                socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
+                break
 
-            consecutive_fails = 0
             frame_count += 1
-
+            # Run YOLOv8 detection every 2nd frame for 2x - 3x faster FPS
             run_det = (frame_count % 2 == 0)
             frame, _ = process_frame(frame, run_detection=run_det)
 
             with state_lock:
                 state["stats"]["track_scanned_km"] += 0.0008
 
-            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
+            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
             if ok2:
-                jpeg_bytes = buf.tobytes()
-                state["current_frame_jpeg"] = jpeg_bytes
-                b64_frame = base64.b64encode(jpeg_bytes).decode("utf-8")
-                socketio.emit("video_frame", {"image": f"data:image/jpeg;base64,{b64_frame}"})
-
+                state["current_frame_jpeg"] = buf.tobytes()
 
         cap.release()
-
-
 
 
 
@@ -352,22 +288,15 @@ def set_threshold():
 @app.route("/api/settings/camera", methods=["POST"])
 def set_camera():
     global IP_CAM_URL
-    try:
-        data = request.get_json(force=True) or {}
-        new_url = str(data.get("url", "")).strip()
-        if new_url:
-            if new_url not in ["0", "webcam", "local"] and not new_url.startswith("rtsp://") and not new_url.endswith(".mjpeg"):
-                if not new_url.startswith("http://") and not new_url.startswith("https://"):
-                    new_url = "http://" + new_url
-                if not new_url.endswith("/video"):
-                    new_url = new_url.rstrip("/") + "/video"
-            IP_CAM_URL = new_url
-            print(f"[CAM] Camera URL updated via API: {IP_CAM_URL}")
-            return jsonify({"ok": True, "url": IP_CAM_URL})
-    except Exception as e:
-        print(f"[WARN] Failed to set camera URL: {e}")
+    data = request.get_json(force=True)
+    new_url = data.get("url", "").strip()
+    if new_url:
+        if not new_url.endswith("/video") and not new_url.endswith(".mjpeg") and not new_url.startswith("rtsp://"):
+            new_url = new_url.rstrip("/") + "/video"
+        IP_CAM_URL = new_url
+        print(f"[CAM] Camera URL updated via API: {IP_CAM_URL}")
+        return jsonify({"ok": True, "url": IP_CAM_URL})
     return jsonify({"ok": False, "error": "Invalid URL"}), 400
-
 
 
 

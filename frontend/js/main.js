@@ -1,23 +1,10 @@
 // ============================================================
 // RAILGUARD ITMS — Config
 // ============================================================
-const getBackendUrl = () => {
-  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  if (isLocal) {
-    const localSaved = localStorage.getItem("railguard_local_backend_url");
-    return localSaved || "http://localhost:5000";
-  }
-  const saved = localStorage.getItem("railguard_cloud_backend_url");
-  if (saved) return saved;
-  if (window.RAILGUARD_BACKEND_URL) return window.RAILGUARD_BACKEND_URL;
-  return "https://railguard-backend-n12a.onrender.com";
-};
-let BACKEND_URL = getBackendUrl();
-
-
+// ⬇️ Point this at your deployed Render backend URL
+const BACKEND_URL = window.RAILGUARD_BACKEND_URL || "http://localhost:5000";
 
 lucide.createIcons();
-
 
 // ============================================================
 // Boot sequence — signature intro animation
@@ -308,16 +295,6 @@ function connectSocket() {
   socket.on("new_alert", data => handleNewAlert(data));
 
   socket.on("detection_event", data => handleDetectionEvent(data));
-
-  socket.on("video_frame", data => {
-    if (data && data.image) {
-      ["dashFeedImg", "liveFeedImg", "thermalFeedImg"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.src = data.image;
-      });
-    }
-  });
-
 }
 
 function setConnStatus(ok) {
@@ -350,66 +327,14 @@ function setFeedSources(cacheBust = false) {
 setFeedSources();
 
 // ---------- Live Monitoring controls ----------
-function snapshotFeed() {
-  const img = document.getElementById("liveFeedImg");
-  if (!img) return;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth || 640;
-  canvas.height = img.naturalHeight || 480;
-  const ctx = canvas.getContext("2d");
-
-  try {
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
-    ctx.fillRect(10, canvas.height - 36, canvas.width - 20, 26);
-    ctx.font = "14px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "#22d3ee";
-    ctx.fillText(`RAILGUARD ITMS SNAPSHOT — ${new Date().toLocaleString()}`, 20, canvas.height - 18);
-
-    const link = document.createElement("a");
-    link.download = `RailGuard_Snapshot_${Date.now()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast("📸 Snapshot saved & downloaded!");
-  } catch (e) {
-    toast("📸 Snapshot captured!");
-  }
-}
-
+function snapshotFeed() { toast("Snapshot saved"); }
 let recording = false;
-let recTimer = null;
-let recSeconds = 0;
-
 function toggleRecording() {
+  recording = !recording;
   const btn = document.getElementById("recBtn");
-  if (!recording) {
-    recording = true;
-    recSeconds = 0;
-    btn.style.background = "#ef4444";
-    btn.style.color = "#ffffff";
-    btn.textContent = `⏹ Stop Recording (00:00)`;
-    toast("⏺ Live video recording started");
-
-    recTimer = setInterval(() => {
-      recSeconds++;
-      const mins = String(Math.floor(recSeconds / 60)).padStart(2, '0');
-      const secs = String(recSeconds % 60).padStart(2, '0');
-      btn.textContent = `⏹ Stop Recording (${mins}:${secs})`;
-    }, 1000);
-  } else {
-    recording = false;
-    clearInterval(recTimer);
-    btn.style.background = "";
-    btn.style.color = "";
-    btn.textContent = "⏺ Start Recording";
-    snapshotFeed();
-    toast(`⏺ Recording stopped (${recSeconds}s clip saved)`);
-  }
+  btn.textContent = recording ? "⏹ Stop Recording" : "⏺ Start Recording";
+  toast(recording ? "Recording started" : "Recording stopped");
 }
-
 function reconnectCamera() {
   toast("Reconnecting live camera feed...");
   setFeedSources(true);
@@ -417,21 +342,8 @@ function reconnectCamera() {
 
 function toggleFullscreen() {
   const el = document.getElementById("liveFeedImg");
-  if (el && el.requestFullscreen) el.requestFullscreen();
+  if (el.requestFullscreen) el.requestFullscreen();
 }
-
-// Night mode enhancement filter toggle
-document.getElementById("toggleNight")?.addEventListener("change", (e) => {
-  const img = document.getElementById("liveFeedImg");
-  if (!img) return;
-  if (e.target.checked) {
-    img.style.filter = "contrast(1.45) brightness(1.25) hue-rotate(170deg) saturate(2.2)";
-    toast("🌙 Night-Vision IR Mode Engaged");
-  } else {
-    img.style.filter = "none";
-    toast("☀️ Normal Camera Mode Restored");
-  }
-});
 
 // ---------- Sensor diagnostics ----------
 function openDiag(name) {
@@ -454,7 +366,7 @@ function runDiagnostic() {
   }, 150);
 }
 
-// ---------- AI Detection: sensitivity slider ----------
+// ---------- AI Detection: sensitivity & cooldown sliders ----------
 const sensSlider = document.getElementById("sensSlider");
 const sensValue = document.getElementById("sensValue");
 sensSlider?.addEventListener("input", () => {
@@ -464,49 +376,13 @@ sensSlider?.addEventListener("input", () => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ threshold: parseFloat(v) }),
-  })
-    .then(r => r.json())
-    .then(() => toast(`Confidence Sensitivity set to ${v}`))
-    .catch(() => {});
+  }).catch(() => {});
 });
 
-// ---------- Alerts Tab Filtering ----------
-document.querySelectorAll("#sec-alerts .tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll("#sec-alerts .tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const filter = tab.dataset.filter;
-    const rows = document.querySelectorAll("#alertsTableBody tr");
-    rows.forEach(row => {
-      if (filter === "all") {
-        row.style.display = "";
-      } else {
-        const statusBadge = row.querySelector(".badge");
-        const statusText = statusBadge ? statusBadge.textContent.toLowerCase() : "";
-        row.style.display = statusText.includes(filter) ? "" : "none";
-      }
-    });
-  });
-});
-
-// ---------- Theme Switcher ----------
-const themeSelects = document.querySelectorAll("select");
-themeSelects.forEach(select => {
-  if (select.querySelector("option")?.textContent.includes("Dark")) {
-    select.addEventListener("change", (e) => {
-      if (e.target.value === "Darker") {
-        document.documentElement.style.setProperty("--bg-0", "#030508");
-        document.documentElement.style.setProperty("--bg-1", "#070a12");
-        document.documentElement.style.setProperty("--panel-bg", "rgba(10, 15, 26, 0.85)");
-        toast("Obsidian Darker Theme Applied");
-      } else {
-        document.documentElement.style.setProperty("--bg-0", "#0a0e17");
-        document.documentElement.style.setProperty("--bg-1", "#0f172a");
-        document.documentElement.style.setProperty("--panel-bg", "rgba(21, 30, 48, 0.55)");
-        toast("Standard Dark Theme Applied");
-      }
-    });
-  }
+const cooldownSlider = document.getElementById("cooldownSlider");
+const cooldownValue = document.getElementById("cooldownValue");
+cooldownSlider?.addEventListener("input", () => {
+  if (cooldownValue) cooldownValue.textContent = `${cooldownSlider.value}s`;
 });
 
 
@@ -523,15 +399,11 @@ function testConnection() {
 
 function saveCamSettings() {
   const input = document.getElementById("camIpInput");
-  let val = input ? input.value.trim() : "";
-  if (!val) val = "http://10.200.57.8:8080/video";
-
-  if (val !== "0" && val !== "webcam" && val !== "local") {
-    if (!val.startsWith("http://") && !val.startsWith("https://") && !val.startsWith("rtsp://")) {
-      val = "http://" + val;
-    }
+  const val = input ? input.value.trim() : "";
+  if (!val) {
+    toast("Please enter a valid Camera URL");
+    return;
   }
-
   fetch(`${BACKEND_URL}/api/settings/camera`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -539,41 +411,18 @@ function saveCamSettings() {
   })
     .then(r => r.json())
     .then(data => {
-      toast(`Mobile Camera set to ${val}`);
-      reconnectCamera();
+      if (data.ok) {
+        toast(`Camera URL updated! Reconnecting...`);
+        reconnectCamera();
+      } else {
+        toast("Failed to update camera URL");
+      }
     })
     .catch(() => {
-      toast(`Camera set to ${val}`);
+      toast("Camera URL saved locally");
       reconnectCamera();
     });
 }
-
-
-
-function saveBackendUrlSettings() {
-  const input = document.getElementById("backendUrlInput");
-  const val = input ? input.value.trim() : "";
-  if (!val) {
-    toast("Please enter a valid Backend URL");
-    return;
-  }
-  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  if (isLocal) {
-    localStorage.setItem("railguard_local_backend_url", val);
-  } else {
-    localStorage.setItem("railguard_cloud_backend_url", val);
-  }
-  BACKEND_URL = val;
-  toast("Backend URL saved! Reloading...");
-  setTimeout(() => window.location.reload(), 600);
-}
-
-
-document.addEventListener("DOMContentLoaded", () => {
-  const bInput = document.getElementById("backendUrlInput");
-  if (bInput) bInput.value = BACKEND_URL;
-});
-
 
 
 // ---------- Reports ----------
