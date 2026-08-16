@@ -300,9 +300,13 @@ def camera_loop():
             with state_lock:
                 state["stats"]["track_scanned_km"] += 0.0008
 
-            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
             if ok2:
-                state["current_frame_jpeg"] = buf.tobytes()
+                jpeg_bytes = buf.tobytes()
+                state["current_frame_jpeg"] = jpeg_bytes
+                b64_frame = base64.b64encode(jpeg_bytes).decode("utf-8")
+                socketio.emit("video_frame", {"image": f"data:image/jpeg;base64,{b64_frame}"})
+
 
         cap.release()
 

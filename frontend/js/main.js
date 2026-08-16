@@ -308,6 +308,16 @@ function connectSocket() {
   socket.on("new_alert", data => handleNewAlert(data));
 
   socket.on("detection_event", data => handleDetectionEvent(data));
+
+  socket.on("video_frame", data => {
+    if (data && data.image) {
+      ["dashFeedImg", "liveFeedImg", "thermalFeedImg"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = data.image;
+      });
+    }
+  });
+
 }
 
 function setConnStatus(ok) {
