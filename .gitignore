@@ -1,24 +1,23 @@
-# Environment files
-.env
-*.env
-backend/.env
-
-# Python bytecode & cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-backend/__pycache__/
 
-# Virtual Environment
+# Virtual environments
 venv/
+.venv/
 env/
-ENV/
 
-# YOLO model weights
+# Secrets & Local Configs
+.env
+*.env.local
+
+# Model weights
+yolov8n.pt
 *.pt
-backend/*.pt
+*.onnx
+*.engine
 
-# OS files & temp
+# OS generated files
 .DS_Store
 Thumbs.db
-.a/

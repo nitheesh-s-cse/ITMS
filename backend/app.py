@@ -12,7 +12,6 @@ import threading
 from datetime import datetime, timezone
 
 import cv2
-import numpy as np
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -108,20 +107,15 @@ def now_iso():
 def log_alert_to_db(alert):
     if mongo_db is not None:
         try:
-            doc = dict(alert)
-            doc.pop("_id", None)
-            mongo_db.alerts.insert_one(doc)
+            mongo_db.alerts.insert_one(dict(alert))
         except Exception as e:
             print(f"[WARN] MongoDB insert failed: {e}")
 
     if supabase is not None:
         try:
-            doc = dict(alert)
-            doc.pop("_id", None)
-            supabase.table("alerts").insert(doc).execute()
+            supabase.table("alerts").insert(alert).execute()
         except Exception as e:
             print(f"[WARN] Supabase insert failed: {e}")
-
 
 
 def in_danger_zone(box, frame_w, frame_h):
@@ -219,15 +213,9 @@ def camera_loop():
         socketio.emit("camera_status", {"connected": True, "url": IP_CAM_URL})
         print(f"[CAM] Connected to {IP_CAM_URL}")
 
-        current_active_url = IP_CAM_URL
         frame_count = 0
         while True:
-            if current_active_url != IP_CAM_URL:
-                print(f"[CAM] Switching camera stream to {IP_CAM_URL}...")
-                break
-
             ok, frame = cap.read()
-
             if not ok:
                 print("[CAM] Lost connection, reconnecting...")
                 state["camera_connected"] = False
@@ -283,21 +271,6 @@ def set_threshold():
     value = float(data.get("threshold", CONFIDENCE_THRESHOLD_DEFAULT))
     state["confidence_threshold"] = max(0.1, min(0.9, value))
     return jsonify({"ok": True, "threshold": state["confidence_threshold"]})
-
-
-@app.route("/api/settings/camera", methods=["POST"])
-def set_camera():
-    global IP_CAM_URL
-    data = request.get_json(force=True)
-    new_url = data.get("url", "").strip()
-    if new_url:
-        if not new_url.endswith("/video") and not new_url.endswith(".mjpeg") and not new_url.startswith("rtsp://"):
-            new_url = new_url.rstrip("/") + "/video"
-        IP_CAM_URL = new_url
-        print(f"[CAM] Camera URL updated via API: {IP_CAM_URL}")
-        return jsonify({"ok": True, "url": IP_CAM_URL})
-    return jsonify({"ok": False, "error": "Invalid URL"}), 400
-
 
 
 @app.route("/api/alerts", methods=["GET"])

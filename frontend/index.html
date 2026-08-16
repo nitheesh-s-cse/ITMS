@@ -25,10 +25,8 @@
 <canvas id="particleCanvas"></canvas>
 
 <div class="toast-wrap" id="toastWrap"></div>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app-shell">
-
 
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar" id="sidebar">
@@ -168,10 +166,8 @@
               <button class="btn" onclick="snapshotFeed()">📸 Snapshot</button>
               <button class="btn" id="recBtn" onclick="toggleRecording()">⏺ Start Recording</button>
               <button class="btn" onclick="reconnectCamera()">🔄 Reconnect Camera</button>
-              <button class="btn" onclick="playBeep(); toast('Disaster Siren Triggered 🚨');">📢 Test Siren Horn</button>
               <button class="btn" onclick="toggleFullscreen()">🔍 Fullscreen</button>
             </div>
-
             <div class="conn-status" id="connStatus">Connecting to mobile camera…</div>
           </div>
 
@@ -475,7 +471,7 @@
         <div class="grid grid-2 mb">
           <div class="card">
             <div class="card-title">Camera Configuration</div>
-            <input type="text" id="camIpInput" value="http://10.200.57.8:8080/video" placeholder="http://10.200.57.8:8080/video" style="width:100%; margin-top:8px;">
+            <input type="text" id="camIpInput" placeholder="http://192.168.1.5:8080/video" style="width:100%; margin-top:8px;">
             <div class="control-bar">
               <button class="btn" onclick="testConnection()">Test Connection</button>
               <button class="btn primary" onclick="saveCamSettings()">Save</button>
@@ -491,12 +487,11 @@
         <div class="grid grid-2 mb">
           <div class="card">
             <div class="card-title">Detection Sensitivity</div>
-            <div class="subtle mt">Confidence threshold (<span id="sensValue" class="mono" style="color:var(--cyan);">0.50</span>)</div>
-            <input type="range" id="sensSlider" min="10" max="90" value="50">
-            <div class="subtle mt">Cooldown period: <span id="cooldownValue" class="mono" style="color:var(--cyan);">5s</span></div>
-            <input type="range" id="cooldownSlider" min="1" max="15" value="5">
+            <div class="subtle mt">Confidence threshold</div>
+            <input type="range" min="10" max="90" value="50">
+            <div class="subtle mt">Cooldown period (sec)</div>
+            <input type="range" min="1" max="15" value="5">
           </div>
-
           <div class="card">
             <div class="card-title">Display Preferences</div>
             <div class="flex-between mt"><span class="subtle">Theme</span><select><option>Dark</option><option>Darker</option></select></div>

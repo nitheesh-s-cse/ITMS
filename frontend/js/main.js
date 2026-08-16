@@ -154,21 +154,13 @@ function goTo(name) {
   });
   const active = document.querySelector(`.nav-item[data-section="${name}"]`);
   if (active) pageTitle.textContent = active.textContent.trim();
-  document.getElementById("sidebar")?.classList.remove("open");
-  document.getElementById("sidebarOverlay")?.classList.remove("show");
+  document.getElementById("sidebar").classList.remove("open");
 }
 navItems.forEach(item => item.addEventListener("click", () => goTo(item.dataset.section)));
 
 document.getElementById("hamburger")?.addEventListener("click", () => {
-  document.getElementById("sidebar")?.classList.toggle("open");
-  document.getElementById("sidebarOverlay")?.classList.toggle("show");
+  document.getElementById("sidebar").classList.toggle("open");
 });
-
-document.getElementById("sidebarOverlay")?.addEventListener("click", () => {
-  document.getElementById("sidebar")?.classList.remove("open");
-  document.getElementById("sidebarOverlay")?.classList.remove("show");
-});
-
 
 // ---------- Clock ----------
 function tickClock() {
@@ -366,12 +358,12 @@ function runDiagnostic() {
   }, 150);
 }
 
-// ---------- AI Detection: sensitivity & cooldown sliders ----------
+// ---------- AI Detection: sensitivity slider ----------
 const sensSlider = document.getElementById("sensSlider");
 const sensValue = document.getElementById("sensValue");
 sensSlider?.addEventListener("input", () => {
   const v = (sensSlider.value / 100).toFixed(2);
-  if (sensValue) sensValue.textContent = v;
+  sensValue.textContent = v;
   fetch(`${BACKEND_URL}/api/settings/threshold`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -379,75 +371,20 @@ sensSlider?.addEventListener("input", () => {
   }).catch(() => {});
 });
 
-const cooldownSlider = document.getElementById("cooldownSlider");
-const cooldownValue = document.getElementById("cooldownValue");
-cooldownSlider?.addEventListener("input", () => {
-  if (cooldownValue) cooldownValue.textContent = `${cooldownSlider.value}s`;
-});
-
-
 // ---------- Settings: camera config ----------
-function testConnection() {
-  const input = document.getElementById("camIpInput");
-  const val = input ? input.value.trim() : "";
-  if (!val) {
-    toast("Please enter a camera URL first");
-    return;
-  }
-  toast(`Testing connection to ${val}...`);
-}
-
-function saveCamSettings() {
-  const input = document.getElementById("camIpInput");
-  const val = input ? input.value.trim() : "";
-  if (!val) {
-    toast("Please enter a valid Camera URL");
-    return;
-  }
-  fetch(`${BACKEND_URL}/api/settings/camera`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: val }),
-  })
-    .then(r => r.json())
-    .then(data => {
-      if (data.ok) {
-        toast(`Camera URL updated! Reconnecting...`);
-        reconnectCamera();
-      } else {
-        toast("Failed to update camera URL");
-      }
-    })
-    .catch(() => {
-      toast("Camera URL saved locally");
-      reconnectCamera();
-    });
-}
-
+function testConnection() { toast("Connection test successful"); }
+function saveCamSettings() { toast("Settings Saved"); }
 
 // ---------- Reports ----------
 function generateReport() {
+  toast("Report Generated");
   const body = document.getElementById("reportsBody");
-  const typeSelect = document.getElementById("repType");
-  const type = typeSelect ? typeSelect.value : "Daily_Summary";
-  const filename = `${type.replace(/\s/g, "_")}_${Date.now()}.pdf`;
-  const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const sizeStr = `${(Math.random() * 2 + 0.5).toFixed(1)} MB`;
-
+  const type = document.getElementById("repType").value;
   const row = document.createElement("tr");
-  row.style.cursor = "pointer";
-  row.onclick = () => downloadReport(filename);
-  row.innerHTML = `
-    <td><span style="color:var(--cyan);text-decoration:underline;">${filename}</span></td>
-    <td class="mono">${dateStr}</td>
-    <td class="mono">${sizeStr}</td>
-    <td><button class="btn" style="padding:4px 8px;" onclick="event.stopPropagation(); downloadReport('${filename}');"><i data-lucide="download"></i> Download</button></td>
-  `;
+  row.innerHTML = `<td>${type.replace(/\s/g, "_")}_${Date.now()}.pdf</td><td>${new Date().toLocaleDateString()}</td><td>${(Math.random()*2+0.5).toFixed(1)} MB</td><td><i data-lucide="download"></i></td>`;
   body.prepend(row);
   lucide.createIcons();
-  downloadReport(filename);
 }
-
 
 // ---------- Maintenance modal (simplified inline) ----------
 function openMaintModal() {

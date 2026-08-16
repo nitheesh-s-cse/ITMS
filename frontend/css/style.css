@@ -383,50 +383,12 @@ input[type="text"], input[type="date"], select {
 }
 input[type="range"] { width: 100%; accent-color: var(--cyan); }
 
-/* ---------- Mobile & Cross-Browser Responsive Layout ---------- */
+/* ---------- Mobile ---------- */
 .hamburger { display: none; }
-.sidebar-overlay {
-  position: fixed; inset: 0; background: rgba(5, 7, 13, 0.75);
-  backdrop-filter: blur(4px); z-index: 40; opacity: 0; visibility: hidden;
-  transition: opacity 280ms ease, visibility 280ms ease;
-}
-.sidebar-overlay.show { opacity: 1; visibility: visible; }
-
-@media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .grid-60-40, .grid-70-30 { grid-template-columns: 1fr; }
-}
-
 @media (max-width: 920px) {
-  .sidebar {
-    position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
-    transform: translateX(-100%); transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
-    width: 260px;
-  }
+  .sidebar { position: fixed; transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
-  .hamburger { display: block; cursor: pointer; font-size: 22px; color: var(--text-hi); }
+  .hamburger { display: block; cursor: pointer; }
   .grid-4, .grid-2, .grid-60-40, .grid-70-30 { grid-template-columns: 1fr; }
-  .main { margin-left: 0; width: 100%; }
-  .content { padding: 16px 14px 60px; }
-  .topbar { padding: 12px 14px; }
-  .control-bar { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 8px; }
-  .control-bar .btn { flex: 1 1 calc(50% - 6px); text-align: center; justify-content: center; }
+  .content { padding: 18px 16px 60px; }
 }
-
-@media (max-width: 600px) {
-  .topbar { flex-direction: row; flex-wrap: wrap; gap: 10px; }
-  .topbar-right { gap: 10px; width: 100%; justify-content: space-between; margin-top: 6px; }
-  .page-title { font-size: 17px; }
-  .boot-title { font-size: 18px; }
-  .card { padding: 14px; }
-  .chip-grid { grid-template-columns: 1fr; }
-  .chip { width: 100%; justify-content: space-between; }
-  .control-bar .btn { flex: 1 1 100%; }
-  .phase-track { flex-direction: column; gap: 14px; }
-  .phase::before { display: none; }
-  .phase-dot { display: none; }
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 500px; }
-}
-

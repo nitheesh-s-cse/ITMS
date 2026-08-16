@@ -166,46 +166,6 @@ function seedMaintenance() {
   `).join("");
 }
 
-function downloadReport(filename) {
-  const content = `============================================================
-RAILGUARD ITMS — COMMAND CENTER OFFICIAL REPORT
-============================================================
-Report Name : ${filename}
-Generated On: ${new Date().toLocaleString()}
-System Status: 100% Operational (ONLINE)
-Scanned Track: 12.47 km
-Detection Accuracy: 96.4%
-Total Alerts Logged: ${alertsCache.length || 3}
-
-------------------------------------------------------------
-SYSTEM SUMMARY & SENSOR DIAGNOSTICS
-------------------------------------------------------------
-1. 77 GHz MMW Radar Array  : CALIBRATED (Signal 97%)
-2. PTZ Thermal / IR Camera : ACTIVE (Signal 94%)
-3. Dual-Stage Laser System : NOMINAL (Deviation 0.2mm)
-4. GNSS/IMU Positioning    : LOCKED (Lat 11.0189, Long 76.9725)
-
-------------------------------------------------------------
-INCIDENT LOG & ALERT HIGHLIGHTS
-------------------------------------------------------------
-${alertsCache.length ? alertsCache.map((a, i) => `${i+1}. [${a.severity}] ${a.object_class} detected at Track KM ${a.km_marker} (${new Date(a.timestamp).toLocaleTimeString()})`).join("\n") : "1. [HIGH] person detected at Track KM 4.12\n2. [MEDIUM] vehicle detected at Track KM 8.75"}
-
-------------------------------------------------------------
-Team NEXUS — MSME Idea Hackathon 6.0 (Robotics & Automation)
-============================================================`;
-
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename.endsWith(".txt") || filename.endsWith(".pdf") ? filename.replace(".pdf", ".txt") : filename + ".txt";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  if (typeof toast === "function") toast(`Downloaded ${filename}`);
-}
-
 function seedReports() {
   const reports = [
     ["Daily_Summary_2026-08-15.pdf", "Aug 15, 2026", "1.2 MB"],
@@ -213,16 +173,10 @@ function seedReports() {
     ["Incident_Report_0091.pdf", "Aug 09, 2026", "0.8 MB"],
   ];
   document.getElementById("reportsBody").innerHTML = reports.map(([n,d,s]) => `
-    <tr style="cursor:pointer;" onclick="downloadReport('${n}')">
-      <td><span style="color:var(--cyan);text-decoration:underline;">${n}</span></td>
-      <td class="mono">${d}</td>
-      <td class="mono">${s}</td>
-      <td><button class="btn" style="padding:4px 8px;" onclick="event.stopPropagation(); downloadReport('${n}');"><i data-lucide="download"></i> Download</button></td>
-    </tr>
+    <tr><td>${n}</td><td class="mono">${d}</td><td class="mono">${s}</td><td><i data-lucide="download"></i></td></tr>
   `).join("");
   lucide.createIcons();
 }
-
 
 function animateTrainDot() {
   const path = document.querySelector("#sec-track path");
