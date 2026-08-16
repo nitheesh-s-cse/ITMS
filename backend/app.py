@@ -213,9 +213,15 @@ def camera_loop():
         socketio.emit("camera_status", {"connected": True, "url": IP_CAM_URL})
         print(f"[CAM] Connected to {IP_CAM_URL}")
 
+        current_active_url = IP_CAM_URL
         frame_count = 0
         while True:
+            if current_active_url != IP_CAM_URL:
+                print(f"[CAM] Switching camera stream to {IP_CAM_URL}...")
+                break
+
             ok, frame = cap.read()
+
             if not ok:
                 print("[CAM] Lost connection, reconnecting...")
                 state["camera_connected"] = False
