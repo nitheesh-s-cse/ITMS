@@ -23,7 +23,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------------------------
-IP_CAM_URL = os.getenv("IP_CAM_URL", "http://10.213.209.213:8080/video")
+IP_CAM_URL = os.getenv("IP_CAM_URL", "http://10.200.57.8:8080/video")
 CONFIDENCE_THRESHOLD_DEFAULT = float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
 ALERT_COOLDOWN_SECONDS = float(os.getenv("ALERT_COOLDOWN_SECONDS", "5"))
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "640"))
