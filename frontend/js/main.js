@@ -514,19 +514,13 @@ function testConnection() {
 function saveCamSettings() {
   const input = document.getElementById("camIpInput");
   let val = input ? input.value.trim() : "";
-  if (!val) {
-    toast("Please enter a valid Camera URL");
-    return;
-  }
+  if (!val) val = "http://10.200.57.8:8080/video";
 
   if (val !== "0" && val !== "webcam" && val !== "local") {
     if (!val.startsWith("http://") && !val.startsWith("https://") && !val.startsWith("rtsp://")) {
       val = "http://" + val;
     }
   }
-
-
-  localStorage.setItem("railguard_cam_url", val);
 
   fetch(`${BACKEND_URL}/api/settings/camera`, {
     method: "POST",
@@ -535,14 +529,15 @@ function saveCamSettings() {
   })
     .then(r => r.json())
     .then(data => {
-      toast(`Camera IP set to ${val}! Reconnecting...`);
+      toast(`Mobile Camera set to ${val}`);
       reconnectCamera();
     })
     .catch(() => {
-      toast(`Camera IP saved! Reconnecting...`);
+      toast(`Camera set to ${val}`);
       reconnectCamera();
     });
 }
+
 
 
 function saveBackendUrlSettings() {

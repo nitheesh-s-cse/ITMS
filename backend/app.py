@@ -244,82 +244,68 @@ def make_status_frame(msg1="SIMULATED INSPECTION FEED", msg2="Waiting for camera
 
 
 def camera_loop():
-    """Background thread: pulls frames from phone IP-webcam or local webcam with zero buffer latency."""
+    """Background thread: connects directly to phone IP webcam feed with zero latency."""
     global IP_CAM_URL
     while True:
-        target_raw = IP_CAM_URL.strip()
+        target = IP_CAM_URL.strip()
+        print(f"[CAM] Connecting to camera: {target}...")
 
-        # Support 0 / webcam / local for built-in camera fallback
-        if target_raw in ["0", "webcam", "local"]:
-            display_url = "Local Webcam (0)"
+        if target in ["0", "webcam", "local"]:
             cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
             if not cap.isOpened():
                 cap = cv2.VideoCapture(0)
         else:
-            if not target_raw.endswith("/video") and not target_raw.endswith(".mjpeg") and not target_raw.startswith("rtsp://"):
-                cam_src = target_raw.rstrip("/") + "/video"
-            else:
-                cam_src = target_raw
-            display_url = cam_src
-            cap = cv2.VideoCapture(cam_src)
+            cap = cv2.VideoCapture(target)
 
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-
         if not cap.isOpened():
             state["camera_connected"] = False
-            socketio.emit("camera_status", {"connected": False, "url": display_url})
-            print(f"[CAM] Could not open {display_url}, retrying...")
-
-            for _ in range(25):  # 2.5s status stream loop
-                frame_bytes = make_status_frame("CAMERA CONNECTION FAILED", f"Target: {display_url}")
-                if frame_bytes:
-                    state["current_frame_jpeg"] = frame_bytes
-                time.sleep(0.1)
-                if IP_CAM_URL.strip() != target_raw:
-                    break
+            socketio.emit("camera_status", {"connected": False, "url": target})
+            print(f"[CAM] Could not open {target}, retrying in 2s...")
+            time.sleep(2)
             continue
 
         state["camera_connected"] = True
-        socketio.emit("camera_status", {"connected": True, "url": display_url})
-        print(f"[CAM] Connected successfully to {display_url}")
+        socketio.emit("camera_status", {"connected": True, "url": target})
+        print(f"[CAM] SUCCESS! Stream active: {target}")
 
-        current_active_url = IP_CAM_URL
+        current_active = target
         frame_count = 0
         consecutive_fails = 0
 
         while True:
-            if current_active_url != IP_CAM_URL:
-                print(f"[CAM] Switching camera stream to {IP_CAM_URL}...")
+            if current_active != IP_CAM_URL:
+                print(f"[CAM] Camera URL changed to {IP_CAM_URL}, reconnecting...")
                 break
 
             ok, frame = cap.read()
 
             if not ok or frame is None or frame.size == 0:
                 consecutive_fails += 1
-                if consecutive_fails > 5:
-                    print("[CAM] Lost stream connection, reconnecting...")
+                if consecutive_fails > 10:
+                    print("[CAM] Lost stream connection, retrying...")
                     state["camera_connected"] = False
-                    socketio.emit("camera_status", {"connected": False, "url": display_url})
+                    socketio.emit("camera_status", {"connected": False, "url": target})
                     break
-                time.sleep(0.05)
+                time.sleep(0.03)
                 continue
 
             consecutive_fails = 0
             frame_count += 1
 
-            # Run YOLOv8 detection every 2nd frame for 2x - 3x faster FPS
             run_det = (frame_count % 2 == 0)
             frame, _ = process_frame(frame, run_detection=run_det)
 
             with state_lock:
                 state["stats"]["track_scanned_km"] += 0.0008
 
-            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 55])
+            ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
             if ok2:
                 state["current_frame_jpeg"] = buf.tobytes()
 
         cap.release()
+
 
 
 
