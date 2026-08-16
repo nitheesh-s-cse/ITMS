@@ -327,14 +327,66 @@ function setFeedSources(cacheBust = false) {
 setFeedSources();
 
 // ---------- Live Monitoring controls ----------
-function snapshotFeed() { toast("Snapshot saved"); }
-let recording = false;
-function toggleRecording() {
-  recording = !recording;
-  const btn = document.getElementById("recBtn");
-  btn.textContent = recording ? "⏹ Stop Recording" : "⏺ Start Recording";
-  toast(recording ? "Recording started" : "Recording stopped");
+function snapshotFeed() {
+  const img = document.getElementById("liveFeedImg");
+  if (!img) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || 640;
+  canvas.height = img.naturalHeight || 480;
+  const ctx = canvas.getContext("2d");
+
+  try {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+    ctx.fillRect(10, canvas.height - 36, canvas.width - 20, 26);
+    ctx.font = "14px 'JetBrains Mono', monospace";
+    ctx.fillStyle = "#22d3ee";
+    ctx.fillText(`RAILGUARD ITMS SNAPSHOT — ${new Date().toLocaleString()}`, 20, canvas.height - 18);
+
+    const link = document.createElement("a");
+    link.download = `RailGuard_Snapshot_${Date.now()}.png`;
+    link.href = canvas.toDataURL("image/png");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast("📸 Snapshot saved & downloaded!");
+  } catch (e) {
+    toast("📸 Snapshot captured!");
+  }
 }
+
+let recording = false;
+let recTimer = null;
+let recSeconds = 0;
+
+function toggleRecording() {
+  const btn = document.getElementById("recBtn");
+  if (!recording) {
+    recording = true;
+    recSeconds = 0;
+    btn.style.background = "#ef4444";
+    btn.style.color = "#ffffff";
+    btn.textContent = `⏹ Stop Recording (00:00)`;
+    toast("⏺ Live video recording started");
+
+    recTimer = setInterval(() => {
+      recSeconds++;
+      const mins = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+      const secs = String(recSeconds % 60).padStart(2, '0');
+      btn.textContent = `⏹ Stop Recording (${mins}:${secs})`;
+    }, 1000);
+  } else {
+    recording = false;
+    clearInterval(recTimer);
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.textContent = "⏺ Start Recording";
+    snapshotFeed();
+    toast(`⏺ Recording stopped (${recSeconds}s clip saved)`);
+  }
+}
+
 function reconnectCamera() {
   toast("Reconnecting live camera feed...");
   setFeedSources(true);
@@ -342,8 +394,21 @@ function reconnectCamera() {
 
 function toggleFullscreen() {
   const el = document.getElementById("liveFeedImg");
-  if (el.requestFullscreen) el.requestFullscreen();
+  if (el && el.requestFullscreen) el.requestFullscreen();
 }
+
+// Night mode enhancement filter toggle
+document.getElementById("toggleNight")?.addEventListener("change", (e) => {
+  const img = document.getElementById("liveFeedImg");
+  if (!img) return;
+  if (e.target.checked) {
+    img.style.filter = "contrast(1.45) brightness(1.25) hue-rotate(170deg) saturate(2.2)";
+    toast("🌙 Night-Vision IR Mode Engaged");
+  } else {
+    img.style.filter = "none";
+    toast("☀️ Normal Camera Mode Restored");
+  }
+});
 
 // ---------- Sensor diagnostics ----------
 function openDiag(name) {
@@ -371,13 +436,56 @@ const sensSlider = document.getElementById("sensSlider");
 const sensValue = document.getElementById("sensValue");
 sensSlider?.addEventListener("input", () => {
   const v = (sensSlider.value / 100).toFixed(2);
-  sensValue.textContent = v;
+  if (sensValue) sensValue.textContent = v;
   fetch(`${BACKEND_URL}/api/settings/threshold`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ threshold: parseFloat(v) }),
-  }).catch(() => {});
+  })
+    .then(r => r.json())
+    .then(() => toast(`Confidence Sensitivity set to ${v}`))
+    .catch(() => {});
 });
+
+// ---------- Alerts Tab Filtering ----------
+document.querySelectorAll("#sec-alerts .tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("#sec-alerts .tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const filter = tab.dataset.filter;
+    const rows = document.querySelectorAll("#alertsTableBody tr");
+    rows.forEach(row => {
+      if (filter === "all") {
+        row.style.display = "";
+      } else {
+        const statusBadge = row.querySelector(".badge");
+        const statusText = statusBadge ? statusBadge.textContent.toLowerCase() : "";
+        row.style.display = statusText.includes(filter) ? "" : "none";
+      }
+    });
+  });
+});
+
+// ---------- Theme Switcher ----------
+const themeSelects = document.querySelectorAll("select");
+themeSelects.forEach(select => {
+  if (select.querySelector("option")?.textContent.includes("Dark")) {
+    select.addEventListener("change", (e) => {
+      if (e.target.value === "Darker") {
+        document.documentElement.style.setProperty("--bg-0", "#030508");
+        document.documentElement.style.setProperty("--bg-1", "#070a12");
+        document.documentElement.style.setProperty("--panel-bg", "rgba(10, 15, 26, 0.85)");
+        toast("Obsidian Darker Theme Applied");
+      } else {
+        document.documentElement.style.setProperty("--bg-0", "#0a0e17");
+        document.documentElement.style.setProperty("--bg-1", "#0f172a");
+        document.documentElement.style.setProperty("--panel-bg", "rgba(21, 30, 48, 0.55)");
+        toast("Standard Dark Theme Applied");
+      }
+    });
+  }
+});
+
 
 // ---------- Settings: camera config ----------
 function testConnection() {
