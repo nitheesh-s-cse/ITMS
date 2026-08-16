@@ -180,8 +180,10 @@ function toast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ---------- Alert sound (unlocked on first user interaction per browser rules) ----------
+// ---------- Alert sound (disaster air horn synthesizer) ----------
 let audioCtx = null;
+let hornInterval = null;
+
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === "suspended") audioCtx.resume();
@@ -189,7 +191,7 @@ function initAudio() {
 document.addEventListener("click", initAudio);
 document.addEventListener("keydown", initAudio);
 
-function playBeep() {
+function playSingleDisasterHorn() {
   const toggle = document.getElementById("toggleSound");
   if (toggle && !toggle.checked) return;
   initAudio();
@@ -197,31 +199,59 @@ function playBeep() {
 
   const now = audioCtx.currentTime;
   
-  // Urgent 2-tone emergency siren chime
+  // Heavy Industrial Disaster Air Horn (Dual-Tone 440Hz + 554.37Hz Dissonant Chord + Sub-Rumble)
   const osc1 = audioCtx.createOscillator();
   const gain1 = audioCtx.createGain();
   osc1.type = "sawtooth";
-  osc1.frequency.setValueAtTime(880, now);
-  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
-  gain1.gain.setValueAtTime(0.25, now);
-  gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+  osc1.frequency.setValueAtTime(440, now);
+  osc1.frequency.linearRampToValueAtTime(465, now + 0.35);
+  gain1.gain.setValueAtTime(0.45, now);
+  gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
   osc1.connect(gain1);
   gain1.connect(audioCtx.destination);
   osc1.start(now);
-  osc1.stop(now + 0.18);
+  osc1.stop(now + 0.55);
 
   const osc2 = audioCtx.createOscillator();
   const gain2 = audioCtx.createGain();
   osc2.type = "sawtooth";
-  osc2.frequency.setValueAtTime(1200, now + 0.20);
-  osc2.frequency.exponentialRampToValueAtTime(880, now + 0.35);
-  gain2.gain.setValueAtTime(0.25, now + 0.20);
-  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.38);
+  osc2.frequency.setValueAtTime(554.37, now);
+  osc2.frequency.linearRampToValueAtTime(580, now + 0.35);
+  gain2.gain.setValueAtTime(0.45, now);
+  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
   osc2.connect(gain2);
   gain2.connect(audioCtx.destination);
-  osc2.start(now + 0.20);
-  osc2.stop(now + 0.38);
+  osc2.start(now);
+  osc2.stop(now + 0.55);
+
+  // Sub-bass heavy rumble for train/disaster horn impact
+  const sub = audioCtx.createOscillator();
+  const subGain = audioCtx.createGain();
+  sub.type = "square";
+  sub.frequency.setValueAtTime(110, now);
+  subGain.gain.setValueAtTime(0.35, now);
+  subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+  sub.connect(subGain);
+  subGain.connect(audioCtx.destination);
+  sub.start(now);
+  sub.stop(now + 0.55);
 }
+
+function playBeep() {
+  // Continuous repeating disaster horn sequence (6 bursts over 4 seconds)
+  playSingleDisasterHorn();
+  if (hornInterval) clearInterval(hornInterval);
+  let count = 0;
+  hornInterval = setInterval(() => {
+    count++;
+    playSingleDisasterHorn();
+    if (count >= 6) {
+      clearInterval(hornInterval);
+      hornInterval = null;
+    }
+  }, 600);
+}
+
 
 
 // ---------- Socket.IO ----------
