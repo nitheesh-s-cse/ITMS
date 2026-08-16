@@ -44,6 +44,17 @@ WATCH_CLASSES = {
     "bicycle": "vehicle",
 }
 
+MONGODB_URI = os.getenv("MONGODB_URI")
+mongo_db = None
+if MONGODB_URI:
+    try:
+        from pymongo import MongoClient
+        mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        mongo_db = mongo_client.get_database("railguard_itms")
+        print("[INFO] Connected to MongoDB Atlas")
+    except Exception as e:
+        print(f"[WARN] MongoDB Atlas not initialised: {e}")
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = None
@@ -82,13 +93,19 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
-def log_alert_to_supabase(alert):
-    if not supabase:
-        return
-    try:
-        supabase.table("alerts").insert(alert).execute()
-    except Exception as e:
-        print(f"[WARN] Supabase insert failed: {e}")
+def log_alert_to_db(alert):
+    if mongo_db is not None:
+        try:
+            mongo_db.alerts.insert_one(dict(alert))
+        except Exception as e:
+            print(f"[WARN] MongoDB insert failed: {e}")
+
+    if supabase is not None:
+        try:
+            supabase.table("alerts").insert(alert).execute()
+        except Exception as e:
+            print(f"[WARN] Supabase insert failed: {e}")
+
 
 
 def in_danger_zone(box, frame_w, frame_h):
@@ -147,7 +164,7 @@ def process_frame(frame):
                 with state_lock:
                     state["stats"]["active_alerts"] += 1
                 socketio.emit("new_alert", alert)
-                log_alert_to_supabase(alert)
+                log_alert_to_db(alert)
 
     return frame, detections
 
@@ -228,10 +245,21 @@ def set_threshold():
 
 @app.route("/api/alerts", methods=["GET"])
 def get_alerts():
-    if not supabase:
-        return jsonify([])
-    res = supabase.table("alerts").select("*").order("timestamp", desc=True).limit(50).execute()
-    return jsonify(res.data)
+    if mongo_db is not None:
+        try:
+            alerts = list(mongo_db.alerts.find({}, {"_id": 0}).sort("timestamp", -1).limit(50))
+            return jsonify(alerts)
+        except Exception as e:
+            print(f"[WARN] MongoDB query failed: {e}")
+
+    if supabase is not None:
+        try:
+            res = supabase.table("alerts").select("*").order("timestamp", desc=True).limit(50).execute()
+            return jsonify(res.data)
+        except Exception as e:
+            print(f"[WARN] Supabase query failed: {e}")
+
+    return jsonify([])
 
 
 @app.route("/api/status", methods=["GET"])
