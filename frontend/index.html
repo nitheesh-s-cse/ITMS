@@ -517,9 +517,12 @@
 </div>
 
 <script>
-  // ⬇️ EDIT THIS after you deploy the backend to Render
-  window.RAILGUARD_BACKEND_URL = "http://localhost:5000";
+  // Auto-switch: uses localhost when testing locally, or live Render backend when hosted on Vercel
+  window.RAILGUARD_BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5000"
+    : "https://railguard-backend.onrender.com";
 </script>
+
 <script src="js/main.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/dashboard.js"></script>
