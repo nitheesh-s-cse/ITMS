@@ -284,8 +284,10 @@
 
         <div class="card">
           <div class="card-title">Detection Log</div>
-          <table><thead><tr><th>Timestamp</th><th>Class</th><th>Confidence</th><th>BBox</th><th>Snapshot</th></tr></thead>
-          <tbody id="detectionLogBody"><tr><td colspan="5" class="subtle">No detections logged yet.</td></tr></tbody></table>
+          <div class="table-wrap">
+            <table><thead><tr><th>Timestamp</th><th>Class</th><th>Confidence</th><th>BBox</th><th>Snapshot</th></tr></thead>
+            <tbody id="detectionLogBody"><tr><td colspan="5" class="subtle">No detections logged yet.</td></tr></tbody></table>
+          </div>
         </div>
       </section>
 
@@ -299,12 +301,15 @@
               <div class="tab" data-filter="resolved">Resolved</div>
             </div>
             <div class="card">
-              <table>
-                <thead><tr><th>ID</th><th>Time</th><th>Type</th><th>Object</th><th>Conf</th><th>KM</th><th>Severity</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="alertsTableBody"><tr><td colspan="9" class="subtle" style="text-align:center; padding:30px;">No alerts recorded yet — track is clear.</td></tr></tbody>
-              </table>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>ID</th><th>Time</th><th>Type</th><th>Object</th><th>Conf</th><th>KM</th><th>Severity</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody id="alertsTableBody"><tr><td colspan="9" class="subtle" style="text-align:center; padding:30px;">No alerts recorded yet — track is clear.</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
+
           <div>
             <div class="card mb">
               <div class="card-title">Alert Statistics</div>
@@ -381,10 +386,12 @@
         </div>
         <div class="card">
           <div class="card-title">Maintenance History</div>
-          <table>
-            <thead><tr><th>Date</th><th>Component</th><th>Action</th><th>Technician</th><th>Status</th></tr></thead>
-            <tbody id="maintHistoryBody"></tbody>
-          </table>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Component</th><th>Action</th><th>Technician</th><th>Status</th></tr></thead>
+              <tbody id="maintHistoryBody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -400,10 +407,12 @@
         </div>
         <div class="card">
           <div class="card-title">Recent Reports</div>
-          <table>
-            <thead><tr><th>Filename</th><th>Date</th><th>Size</th><th></th></tr></thead>
-            <tbody id="reportsBody"></tbody>
-          </table>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Filename</th><th>Date</th><th>Size</th><th></th></tr></thead>
+              <tbody id="reportsBody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -427,17 +436,20 @@
         </div>
         <div class="card mb">
           <div class="card-title">Competitive Matrix</div>
-          <table>
-            <thead><tr><th>Feature</th><th>Existing Systems</th><th>RailGuard ITMS</th></tr></thead>
-            <tbody>
-              <tr><td>Monitoring</td><td>Periodic</td><td>Continuous</td></tr>
-              <tr><td>Real-time Alerts</td><td>Limited</td><td>Yes</td></tr>
-              <tr><td>Curve / Fog Handling</td><td>Limited</td><td>IMU/GPS Assisted</td></tr>
-              <tr><td>Response Time</td><td>Delayed</td><td>Near Real-Time</td></tr>
-              <tr><td>Surface Defect Detection</td><td>Manual</td><td>Laser-assisted confirmation</td></tr>
-            </tbody>
-          </table>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Feature</th><th>Existing Systems</th><th>RailGuard ITMS</th></tr></thead>
+              <tbody>
+                <tr><td>Monitoring</td><td>Periodic</td><td>Continuous</td></tr>
+                <tr><td>Real-time Alerts</td><td>Limited</td><td>Yes</td></tr>
+                <tr><td>Curve / Fog Handling</td><td>Limited</td><td>IMU/GPS Assisted</td></tr>
+                <tr><td>Response Time</td><td>Delayed</td><td>Near Real-Time</td></tr>
+                <tr><td>Surface Defect Detection</td><td>Manual</td><td>Laser-assisted confirmation</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
         <div class="grid grid-2">
           <div class="card"><div class="card-title">Social Impact</div><div class="subtle">Early detection prevents derailments; safer conditions for maintenance crews; improved public trust.</div></div>
           <div class="card"><div class="card-title">Economic Impact</div><div class="subtle">Addresses disruptions currently estimated at ₹1,000–5,000 crore in annual losses.</div></div>

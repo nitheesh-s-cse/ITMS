@@ -392,6 +392,17 @@ input[type="range"] { width: 100%; accent-color: var(--cyan); }
 }
 .sidebar-overlay.show { opacity: 1; visibility: visible; }
 
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 8px;
+}
+.table-wrap table {
+  width: 100%;
+  min-width: 520px;
+}
+
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-60-40, .grid-70-30 { grid-template-columns: 1fr; }
@@ -408,25 +419,33 @@ input[type="range"] { width: 100%; accent-color: var(--cyan); }
   .hamburger { display: block; cursor: pointer; font-size: 22px; color: var(--text-hi); }
   .grid-4, .grid-2, .grid-60-40, .grid-70-30 { grid-template-columns: 1fr; }
   .main { margin-left: 0; width: 100%; }
-  .content { padding: 16px 14px 60px; }
-  .topbar { padding: 12px 14px; }
+  .content { padding: 16px 12px 60px; }
+  .topbar { padding: 10px 14px; height: auto; min-height: 56px; }
+  .topbar-right { gap: 12px; }
   .control-bar { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 8px; }
   .control-bar .btn { flex: 1 1 calc(50% - 6px); text-align: center; justify-content: center; }
 }
 
-@media (max-width: 600px) {
-  .topbar { flex-direction: row; flex-wrap: wrap; gap: 10px; }
-  .topbar-right { gap: 10px; width: 100%; justify-content: space-between; margin-top: 6px; }
-  .page-title { font-size: 17px; }
+@media (max-width: 640px) {
+  .topbar { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .topbar-right { gap: 10px; }
+  .clock { font-size: 11.5px; }
+  .page-title { font-size: 16px; }
   .boot-title { font-size: 18px; }
-  .card { padding: 14px; }
+  .card { padding: 14px 12px; }
   .chip-grid { grid-template-columns: 1fr; }
   .chip { width: 100%; justify-content: space-between; }
   .control-bar .btn { flex: 1 1 100%; }
   .phase-track { flex-direction: column; gap: 14px; }
   .phase::before { display: none; }
   .phase-dot { display: none; }
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 500px; }
+  .video-panel { aspect-ratio: 16/9 !important; }
 }
+
+@media (max-width: 420px) {
+  .grid-4 { grid-template-columns: 1fr; }
+  .topbar-right .clock { display: none; } /* Hide clock on tiny screens so header doesn't overlap */
+  .card { padding: 12px 10px; }
+}
+
 
