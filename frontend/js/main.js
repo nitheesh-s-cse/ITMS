@@ -154,13 +154,21 @@ function goTo(name) {
   });
   const active = document.querySelector(`.nav-item[data-section="${name}"]`);
   if (active) pageTitle.textContent = active.textContent.trim();
-  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar")?.classList.remove("open");
+  document.getElementById("sidebarOverlay")?.classList.remove("show");
 }
 navItems.forEach(item => item.addEventListener("click", () => goTo(item.dataset.section)));
 
 document.getElementById("hamburger")?.addEventListener("click", () => {
-  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar")?.classList.toggle("open");
+  document.getElementById("sidebarOverlay")?.classList.toggle("show");
 });
+
+document.getElementById("sidebarOverlay")?.addEventListener("click", () => {
+  document.getElementById("sidebar")?.classList.remove("open");
+  document.getElementById("sidebarOverlay")?.classList.remove("show");
+});
+
 
 // ---------- Clock ----------
 function tickClock() {
