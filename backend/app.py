@@ -197,25 +197,68 @@ def process_frame(frame, run_detection=True):
 
 
 
+def make_status_frame(msg1, msg2=""):
+    img = np.zeros((480, 640, 3), dtype=np.uint8)
+    img[:, :] = (20, 15, 10)
+    cv2.rectangle(img, (20, 20), (620, 460), (6, 182, 212), 2)
+    cv2.putText(img, "RAILGUARD ITMS — CAMERA FEED", (140, 160),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (226, 232, 240), 2)
+    cv2.putText(img, msg1, (80, 230),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 165, 255), 2)
+    if msg2:
+        cv2.putText(img, msg2[:50], (80, 270),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (148, 163, 184), 1)
+    t_str = datetime.now().strftime("%H:%M:%S")
+    cv2.putText(img, f"STATUS: RECONNECTING ({t_str})", (180, 330),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (34, 211, 238), 2)
+    cv2.putText(img, "Hint: Open 'IP Webcam' app on phone & click 'Start server'", (60, 380),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (100, 116, 139), 1)
+    ok, buf = cv2.imencode(".jpg", img)
+    return buf.tobytes() if ok else None
+
+
 def camera_loop():
-    """Background thread: pulls frames from the phone's IP-webcam feed with zero buffer latency."""
+    """Background thread: pulls frames from phone IP-webcam or local webcam with zero buffer latency."""
+    global IP_CAM_URL
     while True:
-        cap = cv2.VideoCapture(IP_CAM_URL)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # flush buffer for zero lag
+        target_raw = IP_CAM_URL.strip()
+
+        # Support 0 / webcam / local for built-in camera fallback
+        if target_raw in ["0", "webcam", "local"]:
+            cam_src = 0
+            display_url = "Local Webcam (0)"
+        else:
+            if not target_raw.endswith("/video") and not target_raw.endswith(".mjpeg") and not target_raw.startswith("rtsp://"):
+                cam_src = target_raw.rstrip("/") + "/video"
+            else:
+                cam_src = target_raw
+            display_url = cam_src
+
+        cap = cv2.VideoCapture(cam_src)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         if not cap.isOpened():
             state["camera_connected"] = False
-            socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
-            print(f"[CAM] Could not open {IP_CAM_URL}, retrying in 5s...")
-            time.sleep(5)
+            socketio.emit("camera_status", {"connected": False, "url": display_url})
+            print(f"[CAM] Could not open {display_url}, retrying...")
+
+            for _ in range(25):  # 2.5s status stream loop
+                frame_bytes = make_status_frame("CAMERA CONNECTION FAILED", f"Target: {display_url}")
+                if frame_bytes:
+                    state["current_frame_jpeg"] = frame_bytes
+                time.sleep(0.1)
+                if IP_CAM_URL.strip() != target_raw:
+                    break
             continue
 
         state["camera_connected"] = True
-        socketio.emit("camera_status", {"connected": True, "url": IP_CAM_URL})
-        print(f"[CAM] Connected to {IP_CAM_URL}")
+        socketio.emit("camera_status", {"connected": True, "url": display_url})
+        print(f"[CAM] Connected successfully to {display_url}")
 
         current_active_url = IP_CAM_URL
         frame_count = 0
+        consecutive_fails = 0
+
         while True:
             if current_active_url != IP_CAM_URL:
                 print(f"[CAM] Switching camera stream to {IP_CAM_URL}...")
@@ -223,13 +266,19 @@ def camera_loop():
 
             ok, frame = cap.read()
 
-            if not ok:
-                print("[CAM] Lost connection, reconnecting...")
-                state["camera_connected"] = False
-                socketio.emit("camera_status", {"connected": False, "url": IP_CAM_URL})
-                break
+            if not ok or frame is None or frame.size == 0:
+                consecutive_fails += 1
+                if consecutive_fails > 5:
+                    print("[CAM] Lost stream connection, reconnecting...")
+                    state["camera_connected"] = False
+                    socketio.emit("camera_status", {"connected": False, "url": display_url})
+                    break
+                time.sleep(0.05)
+                continue
 
+            consecutive_fails = 0
             frame_count += 1
+
             # Run YOLOv8 detection every 2nd frame for 2x - 3x faster FPS
             run_det = (frame_count % 2 == 0)
             frame, _ = process_frame(frame, run_detection=run_det)
@@ -242,6 +291,7 @@ def camera_loop():
                 state["current_frame_jpeg"] = buf.tobytes()
 
         cap.release()
+
 
 
 
