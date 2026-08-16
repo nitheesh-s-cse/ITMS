@@ -359,15 +359,22 @@ def set_threshold():
 @app.route("/api/settings/camera", methods=["POST"])
 def set_camera():
     global IP_CAM_URL
-    data = request.get_json(force=True)
-    new_url = data.get("url", "").strip()
-    if new_url:
-        if not new_url.endswith("/video") and not new_url.endswith(".mjpeg") and not new_url.startswith("rtsp://"):
-            new_url = new_url.rstrip("/") + "/video"
-        IP_CAM_URL = new_url
-        print(f"[CAM] Camera URL updated via API: {IP_CAM_URL}")
-        return jsonify({"ok": True, "url": IP_CAM_URL})
+    try:
+        data = request.get_json(force=True) or {}
+        new_url = str(data.get("url", "")).strip()
+        if new_url:
+            if new_url not in ["0", "webcam", "local"] and not new_url.startswith("rtsp://") and not new_url.endswith(".mjpeg"):
+                if not new_url.startswith("http://") and not new_url.startswith("https://"):
+                    new_url = "http://" + new_url
+                if not new_url.endswith("/video"):
+                    new_url = new_url.rstrip("/") + "/video"
+            IP_CAM_URL = new_url
+            print(f"[CAM] Camera URL updated via API: {IP_CAM_URL}")
+            return jsonify({"ok": True, "url": IP_CAM_URL})
+    except Exception as e:
+        print(f"[WARN] Failed to set camera URL: {e}")
     return jsonify({"ok": False, "error": "Invalid URL"}), 400
+
 
 
 
