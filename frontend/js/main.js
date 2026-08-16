@@ -2,15 +2,18 @@
 // RAILGUARD ITMS — Config
 // ============================================================
 const getBackendUrl = () => {
-  const saved = localStorage.getItem("railguard_backend_url");
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (isLocal) {
+    const localSaved = localStorage.getItem("railguard_local_backend_url");
+    return localSaved || "http://localhost:5000";
+  }
+  const saved = localStorage.getItem("railguard_cloud_backend_url");
   if (saved) return saved;
   if (window.RAILGUARD_BACKEND_URL) return window.RAILGUARD_BACKEND_URL;
-  if (window.location.protocol === "https:") {
-    return "https://railguard-backend-n12a.onrender.com";
-  }
-  return "http://localhost:5000";
+  return "https://railguard-backend-n12a.onrender.com";
 };
 let BACKEND_URL = getBackendUrl();
+
 
 
 lucide.createIcons();
@@ -549,11 +552,17 @@ function saveBackendUrlSettings() {
     toast("Please enter a valid Backend URL");
     return;
   }
-  localStorage.setItem("railguard_backend_url", val);
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (isLocal) {
+    localStorage.setItem("railguard_local_backend_url", val);
+  } else {
+    localStorage.setItem("railguard_cloud_backend_url", val);
+  }
   BACKEND_URL = val;
   toast("Backend URL saved! Reloading...");
-  setTimeout(() => window.location.reload(), 800);
+  setTimeout(() => window.location.reload(), 600);
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const bInput = document.getElementById("backendUrlInput");
