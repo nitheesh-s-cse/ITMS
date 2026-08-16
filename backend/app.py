@@ -24,6 +24,8 @@ load_dotenv()
 # CONFIG
 # ---------------------------------------------------------------------------
 IP_CAM_URL = os.getenv("IP_CAM_URL", "http://10.200.57.8:8080/video")
+if not IP_CAM_URL or "<your-phone-ip>" in IP_CAM_URL or "YOUR-PHONE-IP" in IP_CAM_URL:
+    IP_CAM_URL = "http://10.200.57.8:8080/video"
 CONFIDENCE_THRESHOLD_DEFAULT = float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
 ALERT_COOLDOWN_SECONDS = float(os.getenv("ALERT_COOLDOWN_SECONDS", "5"))
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "640"))
@@ -275,4 +277,4 @@ if __name__ == "__main__":
     threading.Thread(target=camera_loop, daemon=True).start()
     threading.Thread(target=heartbeat_loop, daemon=True).start()
     port = int(os.getenv("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port)
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
