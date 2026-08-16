@@ -12,6 +12,7 @@ import threading
 from datetime import datetime, timezone
 
 import cv2
+import numpy as np
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
