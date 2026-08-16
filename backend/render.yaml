@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: railguard-backend
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: IP_CAM_URL
+        value: http://10.213.209.213:8080/video
+      - key: CONFIDENCE_THRESHOLD
+        value: "0.5"
+      - key: ALERT_COOLDOWN_SECONDS
+        value: "5"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

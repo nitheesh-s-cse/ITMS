@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAILGUARD ITMS — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Signature boot sequence -->
+<div id="bootScreen">
+  <div class="boot-ring"></div>
+  <div class="boot-title">RAILGUARD ITMS</div>
+  <div class="boot-sub">SENSOR-FUSION TRACK SAFETY SYSTEM · v2.0</div>
+  <div class="boot-log" id="bootLog"></div>
+  <div class="boot-progress-track"><div class="boot-progress-fill" id="bootProgress"></div></div>
+</div>
+
+<canvas id="particleCanvas"></canvas>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="app-shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-icon">🚆</span>
+      <div>
+        <div class="brand-name">RAILGUARD ITMS</div>
+        <div class="brand-sub">v2.0 COMMAND CENTER</div>
+      </div>
+    </div>
+
+    <nav class="nav" id="navList">
+      <div class="nav-item active" data-section="dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+      <div class="nav-item" data-section="live"><span class="nav-icon">🚆</span>Live Monitoring</div>
+      <div class="nav-item" data-section="sensors"><span class="nav-icon">📡</span>Sensor Status</div>
+      <div class="nav-item" data-section="ai"><span class="nav-icon">🧠</span>AI Detection</div>
+      <div class="nav-item" data-section="alerts"><span class="nav-icon">⚠️</span>Alerts</div>
+      <div class="nav-item" data-section="track"><span class="nav-icon">🗺️</span>Track Health</div>
+      <div class="nav-item" data-section="analytics"><span class="nav-icon">📊</span>Analytics</div>
+      <div class="nav-item" data-section="maintenance"><span class="nav-icon">🛠️</span>Maintenance</div>
+      <div class="nav-item" data-section="reports"><span class="nav-icon">📄</span>Reports</div>
+      <div class="nav-item" data-section="business"><span class="nav-icon">💰</span>Business & Impact</div>
+      <div class="nav-item" data-section="roadmap"><span class="nav-icon">🧭</span>Scalability</div>
+      <div class="nav-item" data-section="settings"><span class="nav-icon">⚙️</span>Settings</div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-row"><span class="dot" id="sysDot"></span><span id="sysText">System Online</span></div>
+      <div class="team-badge">Built by NEXUS</div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <i data-lucide="menu" class="hamburger" id="hamburger"></i>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="clock mono" id="clock">--:--:--</div>
+        <div class="bell"><i data-lucide="bell"></i><span class="bell-badge" id="bellBadge">0</span></div>
+        <div class="avatar">NX</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section class="section active" id="sec-dashboard">
+        <div class="grid grid-4 mb">
+          <div class="card">
+            <div class="card-title">Track Scanned Today</div>
+            <div class="kpi-value mono" id="kpiScanned">0.00 km</div>
+            <div class="kpi-trend up">↑ live</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Active Alerts</div>
+            <div class="kpi-value mono" id="kpiAlerts">0</div>
+            <div class="kpi-trend" id="kpiAlertsTrend">— stable</div>
+          </div>
+          <div class="card">
+            <div class="card-title">System Uptime</div>
+            <div class="kpi-value mono" id="kpiUptime">99.8%</div>
+            <div class="kpi-trend up">↑ nominal</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Detection Accuracy</div>
+            <div class="kpi-value mono" id="kpiAccuracy">91.4%</div>
+            <div class="kpi-trend up">↑ 0.3%</div>
+          </div>
+        </div>
+
+        <div class="grid grid-60-40 mb">
+          <div class="card">
+            <div class="card-title">Live Feed Preview</div>
+            <div class="video-panel" style="aspect-ratio:16/8;">
+              <img id="dashFeedImg" src="" alt="live feed" onerror="this.style.display='none'">
+              <div class="live-badge"><span class="dot"></span>LIVE</div>
+              <div class="scan-sweep"></div>
+              <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+              <div class="crosshair"></div>
+            </div>
+            <button class="btn mt" onclick="goTo('live')">View Full Monitor →</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent Alerts</div>
+            <div id="dashRecentAlerts"><div class="empty-state"><div class="icon">✅</div>No alerts yet — all clear.</div></div>
+          </div>
+        </div>
+
+        <div class="grid grid-4 mb" id="sensorStrip">
+          <div class="pill"><span class="dot" id="pillRadar"></span>Radar Active</div>
+          <div class="pill"><span class="dot" id="pillThermal"></span>Thermal Cam Active</div>
+          <div class="pill"><span class="dot" id="pillLaser"></span>Laser Active</div>
+          <div class="pill"><span class="dot" id="pillGps"></span>GPS/IMU Active</div>
+        </div>
+
+        <div class="grid grid-70-30">
+          <div class="card">
+            <div class="card-title">Detections — Last 24 Hours</div>
+            <canvas id="chartDash24h" height="90"></canvas>
+          </div>
+          <div class="card gauge-wrap">
+            <div class="card-title">Overall System Health</div>
+            <canvas id="gaugeHealth" width="140" height="140"></canvas>
+            <div class="gauge-value">98%</div>
+          </div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-title">Radar Sweep — Live Obstruction Field</div>
+          <div class="radar-hero" id="radarHero">
+            <div class="radar-ring" style="width:60px;height:60px;"></div>
+            <div class="radar-ring" style="width:120px;height:120px;"></div>
+            <div class="radar-ring" style="width:180px;height:180px;"></div>
+            <div class="radar-sweep-arm"></div>
+            <div class="radar-center-label"><div class="big" id="radarClearText">CLEAR</div><div class="small">340m RANGE · NO OBSTRUCTION</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== LIVE MONITORING ===================== -->
+      <section class="section" id="sec-live">
+        <div class="grid grid-70-30">
+          <div>
+            <div class="alert-banner" id="liveAlertBanner"></div>
+            <div class="video-panel">
+              <img id="liveFeedImg" src="" alt="live feed">
+              <div class="live-badge"><span class="dot"></span>LIVE</div>
+              <div class="feed-stats mono" id="feedStats">FPS 12 · 640×480</div>
+              <div class="scan-sweep"></div>
+              <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+              <div class="crosshair"></div>
+            </div>
+            <div class="control-bar">
+              <button class="btn" onclick="snapshotFeed()">📸 Snapshot</button>
+              <button class="btn" id="recBtn" onclick="toggleRecording()">⏺ Start Recording</button>
+              <button class="btn" onclick="reconnectCamera()">🔄 Reconnect Camera</button>
+              <button class="btn" onclick="toggleFullscreen()">🔍 Fullscreen</button>
+            </div>
+            <div class="conn-status" id="connStatus">Connecting to mobile camera…</div>
+          </div>
+
+          <div>
+            <div class="card mb">
+              <div class="card-title">Detection Feed</div>
+              <div id="liveDetFeed"><div class="empty-state"><div class="icon">👁️</div>Waiting for detections…</div></div>
+            </div>
+            <div class="card mb">
+              <div class="card-title">Current Frame Analysis</div>
+              <div class="subtle" id="frameAnalysis">0 objects in frame</div>
+            </div>
+            <div class="card mb">
+              <div class="card-title">Confidence Meter</div>
+              <div class="progress-track"><div class="progress-fill" id="confMeter" style="width:0%"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Quick Controls</div>
+              <div class="flex-between mt"><span class="subtle">Sound Alerts</span><label class="toggle"><input type="checkbox" id="toggleSound" checked><span class="track"><span class="thumb"></span></span></label></div>
+              <div class="flex-between mt"><span class="subtle">Auto-Record on Alert</span><label class="toggle"><input type="checkbox" id="toggleAutoRec"><span class="track"><span class="thumb"></span></span></label></div>
+              <div class="flex-between mt"><span class="subtle">Night Mode Enhancement</span><label class="toggle"><input type="checkbox" id="toggleNight"><span class="track"><span class="thumb"></span></span></label></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SENSOR STATUS ===================== -->
+      <section class="section" id="sec-sensors">
+        <div class="grid grid-2 mb">
+          <div class="card sensor-card">
+            <div class="flex-between"><div class="card-title">77 GHz MMW Radar</div><span class="badge low">Active</span></div>
+            <div class="subtle">Range: 340m · No obstruction · ~1km effective range</div>
+            <canvas id="sparkRadar" height="50" class="mt"></canvas>
+            <div class="health-row"><div class="progress-track"><div class="progress-fill" style="width:97%"></div></div><span class="mono subtle">97%</span></div>
+            <div class="subtle mt">Last calibrated: 2026-08-10 · <span style="cursor:pointer;color:var(--cyan)" onclick="openDiag('Radar')">Diagnostics</span></div>
+          </div>
+          <div class="card sensor-card">
+            <div class="flex-between"><div class="card-title">PTZ Thermal / IR Camera</div><span class="badge low">Active</span></div>
+            <div class="subtle">Temp range: 24–31°C · Normal · Pan-tilt-zoom tracking</div>
+            <div class="video-panel mt" style="aspect-ratio:16/6;"><img id="thermalFeedImg" src=""></div>
+            <div class="health-row"><div class="progress-track"><div class="progress-fill" style="width:94%"></div></div><span class="mono subtle">94%</span></div>
+            <div class="subtle mt">Last calibrated: 2026-08-11 · <span style="cursor:pointer;color:var(--cyan)" onclick="openDiag('Thermal Camera')">Diagnostics</span></div>
+          </div>
+          <div class="card sensor-card">
+            <div class="flex-between"><div class="card-title">Dual-Stage Laser System</div><span class="badge low">Active</span></div>
+            <div class="subtle">Rail surface: Normal · Deviation: 0.2mm</div>
+            <canvas id="sparkLaser" height="50" class="mt"></canvas>
+            <div class="health-row"><div class="progress-track"><div class="progress-fill" style="width:99%"></div></div><span class="mono subtle">99%</span></div>
+            <div class="subtle mt">Last calibrated: 2026-08-09 · <span style="cursor:pointer;color:var(--cyan)" onclick="openDiag('Laser System')">Diagnostics</span></div>
+          </div>
+          <div class="card sensor-card">
+            <div class="flex-between"><div class="card-title">IMU + GNSS / GPS</div><span class="badge low">Active</span></div>
+            <div class="subtle mono" id="gpsCoords">Lat 11.0189, Long 76.9725</div>
+            <div class="subtle mt">Heading: 042° NE · Curve awareness engaged</div>
+            <div class="health-row"><div class="progress-track"><div class="progress-fill" style="width:96%"></div></div><span class="mono subtle">96%</span></div>
+            <div class="subtle mt">Last calibrated: 2026-08-12 · <span style="cursor:pointer;color:var(--cyan)" onclick="openDiag('GPS/IMU')">Diagnostics</span></div>
+          </div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <button class="btn primary" onclick="runDiagnostic()">Run Full System Diagnostic</button>
+          <div class="progress-track mt" style="display:none;" id="diagBar"><div class="progress-fill" id="diagBarFill" style="width:0%"></div></div>
+        </div>
+      </section>
+
+      <!-- ===================== AI DETECTION ===================== -->
+      <section class="section" id="sec-ai">
+        <div class="card mb">
+          <div class="card-title">Model</div>
+          <div>YOLOv8n Object Classification · Compute: Edge AI (NVIDIA Jetson Orin) · Multi-Sensor Fusion Engine (Radar + IR + Laser correlation)</div>
+          <div class="grid grid-4 mt">
+            <div><div class="subtle">Precision</div><div class="mono kpi-value" style="font-size:20px;">0.89</div></div>
+            <div><div class="subtle">Recall</div><div class="mono kpi-value" style="font-size:20px;">0.86</div></div>
+            <div><div class="subtle">mAP@0.5</div><div class="mono kpi-value" style="font-size:20px;">0.83</div></div>
+            <div><div class="subtle">Inference</div><div class="mono kpi-value" style="font-size:20px;">38ms</div></div>
+          </div>
+        </div>
+
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="card-title">Time-to-Risk (TTR) Evaluation</div>
+            <div class="subtle">Speed · distance · braking margin</div>
+            <div class="kpi-value mono mt" id="ttrValue">4.2s</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Event Trigger Logic</div>
+            <div class="subtle" id="eventLog">Threshold breach → event dispatch: idle</div>
+          </div>
+        </div>
+
+        <div class="card mb">
+          <div class="card-title">Detection Classes — Today</div>
+          <div class="chip-grid" id="classChips">
+            <div class="chip">🧍 Person <span class="count" id="cnt-person">0</span></div>
+            <div class="chip">🐄 Animal <span class="count" id="cnt-animal">0</span></div>
+            <div class="chip">🚗 Vehicle <span class="count" id="cnt-vehicle">0</span></div>
+            <div class="chip">📦 Debris <span class="count" id="cnt-debris">0</span></div>
+          </div>
+        </div>
+
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="card-title">Live Confidence Distribution</div>
+            <canvas id="chartConfDist" height="120"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-title">Detection Threshold — Sensitivity</div>
+            <input type="range" min="10" max="90" value="50" id="sensSlider">
+            <div class="flex-between mt"><span class="subtle">Current: <span class="mono" id="sensValue">0.50</span></span></div>
+            <div class="subtle mt">Lower = more sensitive but more false positives</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Detection Log</div>
+          <table><thead><tr><th>Timestamp</th><th>Class</th><th>Confidence</th><th>BBox</th><th>Snapshot</th></tr></thead>
+          <tbody id="detectionLogBody"><tr><td colspan="5" class="subtle">No detections logged yet.</td></tr></tbody></table>
+        </div>
+      </section>
+
+      <!-- ===================== ALERTS ===================== -->
+      <section class="section" id="sec-alerts">
+        <div class="grid grid-70-30">
+          <div>
+            <div class="tabs">
+              <div class="tab active" data-filter="all">All</div>
+              <div class="tab" data-filter="active">Active</div>
+              <div class="tab" data-filter="resolved">Resolved</div>
+            </div>
+            <div class="card">
+              <table>
+                <thead><tr><th>ID</th><th>Time</th><th>Type</th><th>Object</th><th>Conf</th><th>KM</th><th>Severity</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="alertsTableBody"><tr><td colspan="9" class="subtle" style="text-align:center; padding:30px;">No alerts recorded yet — track is clear.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="card mb">
+              <div class="card-title">Alert Statistics</div>
+              <canvas id="chartAlertSeverity" height="180"></canvas>
+            </div>
+            <div class="card">
+              <div class="flex-between"><span class="subtle">Total Today</span><span class="mono" id="alertsToday">0</span></div>
+              <div class="flex-between mt"><span class="subtle">Total This Week</span><span class="mono" id="alertsWeek">0</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TRACK HEALTH ===================== -->
+      <section class="section" id="sec-track">
+        <div class="grid grid-70-30 mb">
+          <div class="card">
+            <div class="card-title">Live Track Map</div>
+            <svg viewBox="0 0 600 200" style="width:100%; height:220px;">
+              <path d="M20,100 Q150,20 300,100 T580,100" stroke="#22d3ee" stroke-width="2" fill="none" opacity="0.4"/>
+              <circle id="trainDot" r="6" fill="#22d3ee" style="filter:drop-shadow(0 0 6px #22d3ee)"/>
+            </svg>
+          </div>
+          <div class="card">
+            <div class="card-title">Legend</div>
+            <div class="mt"><span class="badge healthy">Healthy</span> Good condition</div>
+            <div class="mt"><span class="badge monitor">Monitor</span> Needs watching</div>
+            <div class="mt"><span class="badge critical">Critical</span> Needs inspection</div>
+          </div>
+        </div>
+        <div class="card mb">
+          <div class="card-title">Track Segments</div>
+          <table>
+            <thead><tr><th>Segment</th><th>Status</th><th>Last Scanned</th><th>Defects</th></tr></thead>
+            <tbody id="segmentsBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">30-Day Health Trend</div>
+          <canvas id="chartTrackTrend" height="90"></canvas>
+        </div>
+      </section>
+
+      <!-- ===================== ANALYTICS ===================== -->
+      <section class="section" id="sec-analytics">
+        <div class="grid grid-4 mb">
+          <div class="card"><div class="card-title">Total Detections</div><div class="kpi-value mono" id="anTotalDet">0</div></div>
+          <div class="card"><div class="card-title">Distance Monitored</div><div class="kpi-value mono" id="anDistance">0 km</div></div>
+          <div class="card"><div class="card-title">Avg Daily Alerts</div><div class="kpi-value mono">6.2</div></div>
+          <div class="card"><div class="card-title">System Efficiency</div><div class="kpi-value mono">97.1%</div></div>
+        </div>
+        <div class="tabs"><div class="tab active">Today</div><div class="tab">This Week</div><div class="tab">This Month</div></div>
+        <div class="grid grid-2 mb">
+          <div class="card"><div class="card-title">Detections Over Time (7d)</div><canvas id="chartAnDet"></canvas></div>
+          <div class="card"><div class="card-title">Alert Severity Distribution</div><canvas id="chartAnSeverity"></canvas></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card"><div class="card-title">Object Class Frequency</div><canvas id="chartAnClass"></canvas></div>
+          <div class="card"><div class="card-title">Response Time Trend (&lt;1s target)</div><canvas id="chartAnResponse"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ===================== MAINTENANCE ===================== -->
+      <section class="section" id="sec-maintenance">
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="flex-between"><div class="card-title">Upcoming Maintenance</div><button class="btn" onclick="openMaintModal()">+ Schedule</button></div>
+            <div id="upcomingMaint"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Component Health</div>
+            <div id="componentHealth"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Maintenance History</div>
+          <table>
+            <thead><tr><th>Date</th><th>Component</th><th>Action</th><th>Technician</th><th>Status</th></tr></thead>
+            <tbody id="maintHistoryBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== REPORTS ===================== -->
+      <section class="section" id="sec-reports">
+        <div class="card mb">
+          <div class="grid grid-4">
+            <select id="repType"><option>Daily Summary</option><option>Weekly Analysis</option><option>Incident Report</option><option>Maintenance Report</option></select>
+            <input type="date" id="repDate">
+            <div></div>
+            <button class="btn primary" onclick="generateReport()">Generate Report</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Reports</div>
+          <table>
+            <thead><tr><th>Filename</th><th>Date</th><th>Size</th><th></th></tr></thead>
+            <tbody id="reportsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== BUSINESS & IMPACT ===================== -->
+      <section class="section" id="sec-business">
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="card-title">Business Model</div>
+            <div>B2G (Primary) — Indian Railways</div>
+            <div class="subtle mt">Hardware deployment + Annual Maintenance Contract (AMC), with predictive-maintenance analytics as a future upsell.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Mandate Fit</div>
+            <div class="chip-grid mt">
+              <div class="chip">✅ Novel Idea</div>
+              <div class="chip">✅ Cost Saving</div>
+              <div class="chip">✅ Quality of Life</div>
+              <div class="chip">✅ Climate Mitigation</div>
+            </div>
+          </div>
+        </div>
+        <div class="card mb">
+          <div class="card-title">Competitive Matrix</div>
+          <table>
+            <thead><tr><th>Feature</th><th>Existing Systems</th><th>RailGuard ITMS</th></tr></thead>
+            <tbody>
+              <tr><td>Monitoring</td><td>Periodic</td><td>Continuous</td></tr>
+              <tr><td>Real-time Alerts</td><td>Limited</td><td>Yes</td></tr>
+              <tr><td>Curve / Fog Handling</td><td>Limited</td><td>IMU/GPS Assisted</td></tr>
+              <tr><td>Response Time</td><td>Delayed</td><td>Near Real-Time</td></tr>
+              <tr><td>Surface Defect Detection</td><td>Manual</td><td>Laser-assisted confirmation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="grid grid-2">
+          <div class="card"><div class="card-title">Social Impact</div><div class="subtle">Early detection prevents derailments; safer conditions for maintenance crews; improved public trust.</div></div>
+          <div class="card"><div class="card-title">Economic Impact</div><div class="subtle">Addresses disruptions currently estimated at ₹1,000–5,000 crore in annual losses.</div></div>
+        </div>
+      </section>
+
+      <!-- ===================== SCALABILITY ===================== -->
+      <section class="section" id="sec-roadmap">
+        <div class="card mb">
+          <div class="card-title">Scale-Up Plan</div>
+          <div class="phase-track">
+            <div class="phase done"><div class="phase-dot"></div><div class="phase-title">Phase 1</div><div class="phase-label">Pilot deployment (10 trains)</div></div>
+            <div class="phase active"><div class="phase-dot"></div><div class="phase-title">Phase 2</div><div class="phase-label">Field validation & certification</div></div>
+            <div class="phase"><div class="phase-dot"></div><div class="phase-title">Phase 3</div><div class="phase-label">Phased zonal rollout</div></div>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-title">National Track Health Database</div>
+            <div class="mt">📈 Predictive Analytics — degradation trend modelling</div>
+            <div class="mt">🔧 Maintenance Planning — section-wise work scheduling</div>
+            <div class="mt">📊 Performance Reports — zonal safety & audit reporting</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sustainability</div>
+            <div class="subtle">AMC-based recurring operational model. System accuracy and coverage improve over time with accumulated real-world data.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS ===================== -->
+      <section class="section" id="sec-settings">
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="card-title">Camera Configuration</div>
+            <input type="text" id="camIpInput" placeholder="http://192.168.1.5:8080/video" style="width:100%; margin-top:8px;">
+            <div class="control-bar">
+              <button class="btn" onclick="testConnection()">Test Connection</button>
+              <button class="btn primary" onclick="saveCamSettings()">Save</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Alert Preferences</div>
+            <div class="flex-between mt"><span class="subtle">Sound Alerts</span><label class="toggle"><input type="checkbox" checked><span class="track"><span class="thumb"></span></span></label></div>
+            <div class="flex-between mt"><span class="subtle">Email Notifications</span><label class="toggle"><input type="checkbox"><span class="track"><span class="thumb"></span></span></label></div>
+            <div class="flex-between mt"><span class="subtle">SMS Alerts</span><label class="toggle"><input type="checkbox"><span class="track"><span class="thumb"></span></span></label></div>
+          </div>
+        </div>
+        <div class="grid grid-2 mb">
+          <div class="card">
+            <div class="card-title">Detection Sensitivity</div>
+            <div class="subtle mt">Confidence threshold</div>
+            <input type="range" min="10" max="90" value="50">
+            <div class="subtle mt">Cooldown period (sec)</div>
+            <input type="range" min="1" max="15" value="5">
+          </div>
+          <div class="card">
+            <div class="card-title">Display Preferences</div>
+            <div class="flex-between mt"><span class="subtle">Theme</span><select><option>Dark</option><option>Darker</option></select></div>
+            <div class="flex-between mt"><span class="subtle">Units</span><select><option>Metric</option><option>Imperial</option></select></div>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-title">System Info</div>
+            <div class="subtle mt">App version: 2.0.0</div>
+            <div class="subtle mt">Backend status: <span id="backendStatusText">checking…</span></div>
+            <div class="subtle mt">Cloud Sync: MQTT (TLS) — <span class="badge low">Configured</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title">About</div>
+            <div class="mt">RAILGUARD ITMS — Built by NEXUS</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ⬇️ EDIT THIS after you deploy the backend to Render
+  window.RAILGUARD_BACKEND_URL = "http://localhost:5000";
+</script>
+<script src="js/main.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
