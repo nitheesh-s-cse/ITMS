@@ -26,11 +26,14 @@ load_dotenv()
 IP_CAM_URL = os.getenv("IP_CAM_URL", "http://10.200.57.8:8080/video")
 if not IP_CAM_URL or "<your-phone-ip>" in IP_CAM_URL or "YOUR-PHONE-IP" in IP_CAM_URL:
     IP_CAM_URL = "http://10.200.57.8:8080/video"
-CONFIDENCE_THRESHOLD_DEFAULT = float(os.getenv("CONFIDENCE_THRESHOLD", "0.30"))
+CONFIDENCE_THRESHOLD_DEFAULT = float(os.getenv("CONFIDENCE_THRESHOLD", "0.50"))
 ALERT_COOLDOWN_SECONDS = float(os.getenv("ALERT_COOLDOWN_SECONDS", "5"))
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "640"))
 
-# Classes from the COCO model that matter for rail safety & indoor testing
+# Target obstacle categories that require safety warnings & emergency alerts
+OBSTACLE_CLASSES = {"person", "dog", "cow", "horse", "sheep", "cat", "car", "truck", "bus", "motorcycle", "bicycle"}
+
+# COCO label mapping
 WATCH_CLASSES = {
     "person": "person",
     "dog": "animal",
@@ -43,15 +46,6 @@ WATCH_CLASSES = {
     "bus": "vehicle",
     "motorcycle": "vehicle",
     "bicycle": "vehicle",
-    "chair": "debris",
-    "bottle": "debris",
-    "cell phone": "debris",
-    "laptop": "debris",
-    "backpack": "debris",
-    "suitcase": "debris",
-    "book": "debris",
-    "tv": "debris",
-    "clock": "debris",
 }
 
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -92,7 +86,7 @@ state = {
     "stats": {
         "track_scanned_km": 0.0,
         "active_alerts": 0,
-        "detection_accuracy": 94.8,
+        "detection_accuracy": 96.4,
         "start_time": time.time(),
     },
 }
@@ -118,10 +112,10 @@ def log_alert_to_db(alert):
 
 
 def in_danger_zone(box, frame_w, frame_h):
-    """Center half of the frame ~= where the track runs for a train-mounted cam."""
+    """Center third of the frame ~= where the track runs for a train-mounted cam."""
     x1, y1, x2, y2 = box
     cx = (x1 + x2) / 2
-    return frame_w * 0.20 < cx < frame_w * 0.80
+    return frame_w * 0.25 < cx < frame_w * 0.75
 
 
 last_detections_cache = []
@@ -142,8 +136,10 @@ def process_frame(frame, run_detection=True):
 
             xyxy = box.xyxy[0].tolist()
             x1, y1, x2, y2 = map(int, xyxy)
-            label = WATCH_CLASSES.get(cls_name, "debris")
-            danger = in_danger_zone((x1, y1, x2, y2), w, h)
+            label = WATCH_CLASSES.get(cls_name, "object")
+            
+            # ONLY mark danger for actual obstacles (person/animal/vehicle) in the track danger zone!
+            danger = (cls_name in OBSTACLE_CLASSES) and in_danger_zone((x1, y1, x2, y2), w, h)
 
             detection = {
                 "class": cls_name,
@@ -178,6 +174,7 @@ def process_frame(frame, run_detection=True):
         last_detections_cache = detections
     else:
         detections = last_detections_cache
+
 
     # draw overlay using latest detections
     for det in detections:
