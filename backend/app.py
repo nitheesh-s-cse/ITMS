@@ -6,8 +6,9 @@ Socket.IO, and logs alerts to Supabase (Postgres).
 """
 
 import os
-# Auto-skip ngrok browser warning page for OpenCV FFmpeg capture
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "headers|ngrok-skip-browser-warning: 69420\r\nUser-Agent: Mozilla/5.0"
+# Auto-skip ngrok browser warning page & reduce FFmpeg network timeout to 500ms (0.5s) instead of 30s!
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "timeout|500000;stimeout|500000;headers|ngrok-skip-browser-warning: 69420\r\nUser-Agent: Mozilla/5.0"
+
 
 import time
 import base64
@@ -369,16 +370,20 @@ def camera_loop():
                 with state_lock:
                     state["stats"]["track_scanned_km"] += 0.0008
 
-                # Downscale for ultra-fast network streaming if resolution > 640
+                # Downscale for ultra-fast 90 FPS streaming if resolution > 480
                 h_f, w_f = frame.shape[:2]
-                if w_f > 640:
-                    frame = cv2.resize(frame, (640, int(h_f * 640 / w_f)))
+                if w_f > 480:
+                    frame = cv2.resize(frame, (480, int(h_f * 480 / w_f)))
 
-                ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 45])
+                ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
                 if ok2:
-                    state["current_frame_jpeg"] = buf.tobytes()
+                    jpeg_bytes = buf.tobytes()
+                    state["current_frame_jpeg"] = jpeg_bytes
+                    b64_str = base64.b64encode(jpeg_bytes).decode("utf-8")
+                    socketio.emit("video_frame", b64_str)
 
-                time.sleep(0.01)
+                time.sleep(0.005)
+
 
             # Clean shutdown of grabber thread & cap release
             with cap_lock:
