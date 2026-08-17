@@ -374,12 +374,8 @@ def camera_loop():
                 with state_lock:
                     state["stats"]["track_scanned_km"] += 0.0008
 
-                # Downscale for ultra-fast 90 FPS streaming if resolution > 480
-                h_f, w_f = frame.shape[:2]
-                if w_f > 480:
-                    frame = cv2.resize(frame, (480, int(h_f * 480 / w_f)))
-
-                ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
+                # High Resolution 85% JPEG Quality streaming
+                ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 if ok2:
                     jpeg_bytes = buf.tobytes()
                     state["current_frame_jpeg"] = jpeg_bytes
@@ -387,6 +383,7 @@ def camera_loop():
                     socketio.emit("video_frame", b64_str)
 
                 time.sleep(0.005)
+
 
 
             # Clean shutdown of grabber thread & cap release

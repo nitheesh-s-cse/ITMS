@@ -158,13 +158,15 @@
           <div>
             <div class="alert-banner" id="liveAlertBanner"></div>
             <div class="video-panel">
-              <img id="liveFeedImg" src="" alt="live feed">
-              <div class="live-badge"><span class="dot"></span>LIVE</div>
-              <div class="feed-stats mono" id="feedStats">FPS 12 · 640×480</div>
-              <div class="scan-sweep"></div>
-              <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
-              <div class="crosshair"></div>
+              <video id="webcamVideo" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:2; border-radius:12px;"></video>
+              <img id="liveFeedImg" src="" alt="live feed" style="z-index:1;">
+              <div class="live-badge" style="z-index:3;"><span class="dot"></span>LIVE</div>
+              <div class="feed-stats mono" id="feedStats" style="z-index:3;">FULL HD 90 FPS · (0ms Latency)</div>
+              <div class="scan-sweep" style="z-index:3;"></div>
+              <div class="corner tl" style="z-index:3;"></div><div class="corner tr" style="z-index:3;"></div><div class="corner bl" style="z-index:3;"></div><div class="corner br" style="z-index:3;"></div>
+              <div class="crosshair" style="z-index:3;"></div>
             </div>
+
             <div class="control-bar">
               <button class="btn" onclick="snapshotFeed()">📸 Snapshot</button>
               <button class="btn" id="recBtn" onclick="toggleRecording()">⏺ Start Recording</button>

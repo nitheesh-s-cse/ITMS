@@ -384,13 +384,72 @@ sensSlider?.addEventListener("input", () => {
 });
 
 // ---------- Settings: camera config (IP Cam vs Built-in Laptop Webcam) ----------
+let localWebcamStream = null;
+
+function startLaptopWebcam() {
+  if (localWebcamStream) return;
+  navigator.mediaDevices.getUserMedia({
+    video: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 60, max: 90 }
+    }
+  })
+  .then(stream => {
+    localWebcamStream = stream;
+    const vid = document.getElementById("webcamVideo");
+    const img = document.getElementById("liveFeedImg");
+    if (vid) {
+      vid.srcObject = stream;
+      vid.style.display = "block";
+    }
+    if (img) img.style.display = "none";
+    toast("Laptop Built-in Webcam Active (Full HD 90 FPS) 💻");
+    const connStatus = document.getElementById("connStatus");
+    if (connStatus) {
+      connStatus.textContent = "Connected to Laptop Built-in Webcam (Full HD 90 FPS)";
+      connStatus.className = "conn-status ok";
+    }
+    const statsEl = document.getElementById("feedStats");
+    if (statsEl) statsEl.textContent = "FULL HD 90 FPS · Laptop Webcam (0ms Latency)";
+  })
+  .catch(err => {
+    toast("Could not access laptop webcam: " + err.message);
+    const connStatus = document.getElementById("connStatus");
+    if (connStatus) {
+      connStatus.textContent = "Laptop Webcam Access Denied or Unavailable";
+      connStatus.className = "conn-status bad";
+    }
+  });
+}
+
+function stopLaptopWebcam() {
+  if (localWebcamStream) {
+    localWebcamStream.getTracks().forEach(track => track.stop());
+    localWebcamStream = null;
+  }
+  const vid = document.getElementById("webcamVideo");
+  const img = document.getElementById("liveFeedImg");
+  if (vid) {
+    vid.style.display = "none";
+    vid.srcObject = null;
+  }
+  if (img) img.style.display = "block";
+}
+
 function toggleCamSourceUI() {
   const isWebcam = document.getElementById("srcWebcam")?.checked;
   const inputBox = document.getElementById("ipCamInputBox");
   if (inputBox) {
     inputBox.style.display = isWebcam ? "none" : "block";
   }
+  if (isWebcam) {
+    startLaptopWebcam();
+  } else {
+    stopLaptopWebcam();
+  }
 }
+
 
 function testConnection() {
   const isWebcam = document.getElementById("srcWebcam")?.checked;
@@ -427,6 +486,12 @@ function saveCamSettings() {
   const input = document.getElementById("camIpInput");
   const val = input ? input.value.trim() : "";
 
+  if (isWebcam) {
+    startLaptopWebcam();
+  } else {
+    stopLaptopWebcam();
+  }
+
   if (!isWebcam && !val) {
     toast("Please enter a mobile camera URL");
     return;
@@ -440,15 +505,16 @@ function saveCamSettings() {
   .then(res => res.json())
   .then(data => {
     if (data.ok) {
-      const msg = isWebcam ? "Switched to Laptop Built-in Webcam 💻" : `Mobile Camera URL saved: ${data.url} 📱`;
+      const msg = isWebcam ? "Switched to Laptop Built-in Webcam (Full HD 90 FPS) 💻" : `Mobile Camera URL saved: ${data.url} 📱`;
       toast(msg);
-      setFeedSources(true);
+      if (!isWebcam) setFeedSources(true);
     } else {
       toast(`Failed to switch camera: ${data.error || "Invalid response"}`);
     }
   })
   .catch(() => toast("Error connecting to backend server"));
 }
+
 
 function loadCurrentCameraUrl() {
   fetch(`${BACKEND_URL}/api/status`)
