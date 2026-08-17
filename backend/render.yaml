@@ -8,7 +8,7 @@ services:
     startCommand: "python app.py"
     envVars:
       - key: IP_CAM_URL
-        value: http://10.200.57.8:8080/video
+        value: http://10.162.14.149:8080/video
       - key: CONFIDENCE_THRESHOLD
         value: "0.5"
       - key: ALERT_COOLDOWN_SECONDS

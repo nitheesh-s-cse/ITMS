@@ -9,7 +9,10 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
+
 </head>
 <body>
 
@@ -471,12 +474,25 @@
         <div class="grid grid-2 mb">
           <div class="card">
             <div class="card-title">Camera Configuration</div>
-            <input type="text" id="camIpInput" placeholder="http://192.168.1.5:8080/video" style="width:100%; margin-top:8px;">
+            <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text);">
+                <input type="radio" name="camSource" value="ipcam" id="srcIpCam" checked onchange="toggleCamSourceUI()"> 📱 Mobile IP / Ngrok Stream
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text);">
+                <input type="radio" name="camSource" value="webcam" id="srcWebcam" onchange="toggleCamSourceUI()"> 💻 Laptop Built-in Webcam
+              </label>
+            </div>
+            <div id="ipCamInputBox" style="margin-top: 10px;">
+              <input type="text" id="camIpInput" placeholder="Paste Ngrok URL (e.g. https://xxxx.ngrok-free.app)" style="width:100%;">
+              <div class="subtle" style="font-size:11px; margin-top:4px;">💡 Paste Termux Ngrok link or IP Webcam URL — Works on Vercel & Localhost!</div>
+            </div>
             <div class="control-bar">
               <button class="btn" onclick="testConnection()">Test Connection</button>
-              <button class="btn primary" onclick="saveCamSettings()">Save</button>
+              <button class="btn primary" onclick="saveCamSettings()">Save & Connect Stream</button>
             </div>
           </div>
+
+
           <div class="card">
             <div class="card-title">Alert Preferences</div>
             <div class="flex-between mt"><span class="subtle">Sound Alerts</span><label class="toggle"><input type="checkbox" id="toggleSound" checked><span class="track"><span class="thumb"></span></span></label></div>
@@ -520,8 +536,9 @@
   // Auto-switch: uses localhost when testing locally, or live Render backend when hosted on Vercel
   window.RAILGUARD_BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:5000"
-    : "https://railguard-backend.onrender.com";
+    : "https://railguard-backend-n12a.onrender.com";
 </script>
+
 
 <script src="js/main.js"></script>
 <script src="js/charts.js"></script>

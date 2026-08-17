@@ -168,15 +168,21 @@ function seedMaintenance() {
 
 function seedReports() {
   const reports = [
-    ["Daily_Summary_2026-08-15.pdf", "Aug 15, 2026", "1.2 MB"],
-    ["Weekly_Analysis_W33.pdf", "Aug 11, 2026", "3.4 MB"],
-    ["Incident_Report_0091.pdf", "Aug 09, 2026", "0.8 MB"],
+    ["Daily_Summary_2026-08-15.pdf", "Aug 15, 2026", "1.2 MB", "Daily Summary"],
+    ["Weekly_Analysis_W33.pdf", "Aug 11, 2026", "3.4 MB", "Weekly Analysis"],
+    ["Incident_Report_0091.pdf", "Aug 09, 2026", "0.8 MB", "Incident Report"],
   ];
-  document.getElementById("reportsBody").innerHTML = reports.map(([n,d,s]) => `
-    <tr><td>${n}</td><td class="mono">${d}</td><td class="mono">${s}</td><td><i data-lucide="download"></i></td></tr>
+  document.getElementById("reportsBody").innerHTML = reports.map(([n,d,s, t]) => `
+    <tr>
+      <td><strong>${n}</strong></td>
+      <td class="mono">${d}</td>
+      <td class="mono">${s}</td>
+      <td><button class="btn sm secondary" onclick="generateReport('${n}', '${t}')"><i data-lucide="download"></i> Download PDF</button></td>
+    </tr>
   `).join("");
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 }
+
 
 function animateTrainDot() {
   const path = document.querySelector("#sec-track path");
