@@ -6,8 +6,9 @@ Socket.IO, and logs alerts to Supabase (Postgres).
 """
 
 import os
-# Auto-skip ngrok browser warning page & reduce FFmpeg network timeout to 500ms (0.5s) instead of 30s!
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "timeout|500000;stimeout|500000;headers|ngrok-skip-browser-warning: 69420\r\nUser-Agent: Mozilla/5.0"
+# Force FFmpeg Zero-Latency Low-Delay Flags to eliminate network buffer delay completely
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "fflags|nobuffer;flags|low_delay;max_delay|0;framedrop;timeout|500000;stimeout|500000;headers|ngrok-skip-browser-warning: 69420\r\nUser-Agent: Mozilla/5.0"
+
 
 
 import time
@@ -315,14 +316,17 @@ def camera_loop():
                         with cap_lock:
                             if not grab_active[0]:
                                 break
-                            ok, f = cap.read()
-                        if ok and f is not None and f.size > 0:
-                            with grab_lock:
-                                latest_raw_frame[0] = f
-                        else:
-                            time.sleep(0.01)
+                            ok = cap.grab()
+                            if ok:
+                                ok2, f = cap.retrieve()
+                                if ok2 and f is not None and f.size > 0:
+                                    with grab_lock:
+                                        latest_raw_frame[0] = f
+                            else:
+                                time.sleep(0.005)
                     except Exception:
-                        time.sleep(0.05)
+                        time.sleep(0.02)
+
 
             t_grab = threading.Thread(target=grabber, daemon=True)
             t_grab.start()
