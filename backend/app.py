@@ -149,9 +149,8 @@ def in_danger_zone(box, frame_w, frame_h):
 last_detections_cache = []
 latest_detections = []
 detections_lock = threading.Lock()
-
 def yolo_worker():
-    """Background worker thread running YOLO object detection asynchronously without blocking video stream."""
+    """Background worker thread running high-precision YOLO object detection asynchronously."""
     global latest_detections
     while True:
         try:
@@ -168,7 +167,9 @@ def yolo_worker():
             state["raw_frame_for_yolo"] = None
 
             h, w = frame.shape[:2]
-            results = model(frame, imgsz=320, verbose=False)[0]
+
+            # High precision 640x640 resolution AI inference
+            results = model(frame, imgsz=640, verbose=False)[0]
 
             detections = []
             for box in results.boxes:
@@ -176,9 +177,12 @@ def yolo_worker():
                 cls_name = model.names[cls_id]
                 conf = float(box.conf[0])
 
+                # High accuracy class thresholds to eliminate misclassifications
                 min_thresh = state["confidence_threshold"]
                 if cls_name == "person":
-                    min_thresh = max(0.62, min_thresh)
+                    min_thresh = max(0.55, min_thresh)
+                elif cls_name in ["cat", "dog", "tv", "laptop", "chair", "couch"]:
+                    min_thresh = max(0.68, min_thresh)
 
                 if conf < min_thresh:
                     continue
@@ -188,7 +192,7 @@ def yolo_worker():
                 box_w = x2 - x1
                 box_h = y2 - y1
 
-                if box_w < 20 or box_h < 30:
+                if box_w < 20 or box_h < 25:
                     continue
 
                 if cls_name == "person":
@@ -196,7 +200,7 @@ def yolo_worker():
                     if aspect_ratio > 1.8 and box_h < 120:
                         continue
 
-                label = WATCH_CLASSES.get(cls_name, "object")
+                label = WATCH_CLASSES.get(cls_name, cls_name)
                 danger = (cls_name in OBSTACLE_CLASSES) and in_danger_zone((x1, y1, x2, y2), w, h)
 
                 detection = {
@@ -327,7 +331,6 @@ def camera_loop():
                     except Exception:
                         time.sleep(0.02)
 
-
             t_grab = threading.Thread(target=grabber, daemon=True)
             t_grab.start()
 
@@ -374,8 +377,14 @@ def camera_loop():
                 with state_lock:
                     state["stats"]["track_scanned_km"] += 0.0008
 
-                # High Resolution 85% JPEG Quality streaming
-                ok2, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                # Resize frame for ultra-fast 60-90 FPS streaming payload (640x360 @ 55% JPEG)
+                h_f, w_f = frame.shape[:2]
+                if w_f > 640:
+                    frame_stream = cv2.resize(frame, (640, int(h_f * 640 / w_f)))
+                else:
+                    frame_stream = frame
+
+                ok2, buf = cv2.imencode(".jpg", frame_stream, [cv2.IMWRITE_JPEG_QUALITY, 55])
                 if ok2:
                     jpeg_bytes = buf.tobytes()
                     state["current_frame_jpeg"] = jpeg_bytes
@@ -383,6 +392,7 @@ def camera_loop():
                     socketio.emit("video_frame", b64_str)
 
                 time.sleep(0.005)
+
 
 
 
